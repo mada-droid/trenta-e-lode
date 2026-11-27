@@ -31,7 +31,8 @@ function topbar() {
     ${islamicOn() ? `<div class="bell-wrap"><button class="icon-btn" data-a="bell" title="Reminders">${ic('bell', 19)}${S.unseen ? '<i class="ping"></i>' : ''}</button><div id="bell" class="drop right"></div></div>` : ''}
     <button class="icon-btn" data-a="zen" title="Full-screen focus with lofi">${ic('lofi', 19)}</button>
     <button class="icon-btn" data-a="tour" title="Tutorial">?</button>
-    <button class="btn cta" data-a="quick-add">${ic('plus', 16)} New task</button>`;
+    <button class="btn cta" data-a="quick-add">${ic('plus', 16)} New task</button>
+    <div class="wctl"><button data-w="min" title="Minimise"><svg viewBox="0 0 12 12"><path d="M2 6.5h8"/></svg></button><button data-w="max" title="Maximise / restore"><svg viewBox="0 0 12 12"><rect x="2.2" y="2.2" width="7.6" height="7.6" rx="1.6"/></svg></button><button data-w="close" class="x" title="Close"><svg viewBox="0 0 12 12"><path d="m2.5 2.5 7 7m0-7-7 7"/></svg></button></div>`;
 }
 function render() {
   menu();
@@ -554,7 +555,7 @@ function locationCard(title = 'Your location') {
       <div class="row"><button class="btn pri" data-a="geo-save">Use ${esc(sub.geoPick.name)}</button><span class="small muted">The method is suggested for ${esc(sub.geoPick.region)}: check it matches your mosque’s timetable.</span></div>` : ''}
   </div>`;
 }
-let METHODS = {};
+let METHODS = {}, APPINFO = {};
 function contentCard() {
   const n = OFFL.adhkar.length, v = OFFL.verses.length;
   return `<div class="card grid"><h2 style="margin:0">Adhkar and Qur’an passages</h2>
@@ -689,6 +690,7 @@ V.settings = () => {
       <label class="f">Language of the videos an AI should look for<input type="text" name="videoLang" value="${esc(s.videoLang)}"></label>
       <label class="f">New flashcards per day<input type="number" name="newCardsPerDay" min="0" max="50" value="${s.newCardsPerDay}"></label>
       <label class="row"><input type="checkbox" name="notch" ${s.notch ? 'checked' : ''}> When minimised, show the dynamic “notch” at the top of the screen</label>
+      ${APPINFO.canAutostart ? `<label class="row"><input type="checkbox" name="autostart" ${s.autostart ? 'checked' : ''}> Start Trenta e Lode when I sign in to the computer</label>` : ''}
       <div class="row"><button class="btn pri">Save</button></div></form>
     <div class="card grid"><h2 style="margin:0">Islamic features</h2>
       <label class="row"><input type="checkbox" data-a="islamic" ${islamicOn() ? 'checked' : ''}> Prayer times, Hijri calendar, Ramaḍān and ʿĪd styling, adhkar and Qur’an reminders</label>
