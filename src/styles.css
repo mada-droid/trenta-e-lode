@@ -458,7 +458,8 @@ code { font-family: ui-monospace, Consolas, monospace; font-size: 12px; backgrou
 .onb-steps i { font-style: normal; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--panel2); font-size: 12px; font-weight: 700; }
 .onb-steps .on { color: var(--text); font-weight: 600; } .onb-steps .on i { background: var(--accent); color: var(--accent-ink); }
 .onb-steps .done i { background: var(--ok); color: #fff; }
-.onb-body { display: grid; gap: 14px; min-height: 260px; align-content: start; }
+.onb-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-height: 260px; align-content: start; } /* minmax(0,…): a long path can't widen the card */
+.onb-body > * { min-width: 0; }
 .onb-body h1 { margin: 0 0 6px; font-size: 28px; } .onb-body h2 { margin: 0; }
 .onb-hero { display: flex; gap: 20px; align-items: center; } .onb-hero img { width: 96px; height: 96px; }
 .onb-add { display: grid; grid-template-columns: 1fr 170px auto; gap: 8px; }
