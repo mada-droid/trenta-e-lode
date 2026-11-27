@@ -37,9 +37,9 @@ const OV_PRELOAD = path.join(__dirname, 'preload-overlay.js');
 const ICON = path.join(__dirname, 'build', 'icon.png');
 
 // ─── Window: size, frameless rounded window (Windows), start at login ────
-// On Windows the window has no title bar: the page draws rounded corners and its own min/max/close buttons.
-// macOS and Linux keep the native frame.
-const FRAMELESS = process.platform === 'win32' && !process.env.TL_SHOT;
+// On Windows the window has no title bar: the page draws its own min/max/close buttons and the window's corners are
+// rounded with a window shape. macOS and Linux keep the native frame.
+const FRAMELESS = process.platform === 'win32';
 // Big screens (3440×1440 ultrawide and up) get a 1730×1100 window, others 1440×900; never larger than the screen.
 function sizeFor(d) {
   const sf = d.scaleFactor || 1, wa = d.workArea;
@@ -48,30 +48,29 @@ function sizeFor(d) {
   const h = Math.min(wide ? Math.round(1100 / sf) : 900, wa.height);
   return { width: w, height: h, x: Math.round(wa.x + (wa.width - w) / 2), y: Math.round(wa.y + (wa.height - h) / 2) };
 }
-let maxed = null; // bounds before our own maximise (transparent windows can't use the native one)
-const winState = () => win && !win.isDestroyed() && win.webContents.send('win:state', { frameless: FRAMELESS, max: FRAMELESS ? !!maxed || win.isFullScreen() : win.isMaximized() || win.isFullScreen() });
-function toggleMax() {
-  if (!win) return;
-  if (!FRAMELESS) win.isMaximized() ? win.unmaximize() : win.maximize();
-  else if (maxed) { win.setBounds(maxed); maxed = null; }
-  else { maxed = win.getBounds(); win.setBounds(screen.getDisplayMatching(maxed).workArea); }
-  winState();
+// The window is opaque, not transparent: Electron's transparent windows on Windows can stop receiving clicks
+// (after being hidden and shown again, and in other cases we could not pin down).
+const RADIUS = 12;
+function roundedShape(w, h, r) {
+  const rows = [];
+  for (let y = 0; y < r; y++) {
+    const dy = r - y - 0.5, inset = Math.round(r - Math.sqrt(r * r - dy * dy));
+    rows.push({ x: inset, y, width: w - 2 * inset, height: 1 }, { x: inset, y: h - 1 - y, width: w - 2 * inset, height: 1 });
+  }
+  rows.push({ x: 0, y: r, width: w, height: h - 2 * r });
+  return rows;
 }
-// Electron/Chromium bug with transparent windows on Windows: after the window is hidden (minimise → notch) and
-// shown again, Chromium leaves its input child window ("Chrome Legacy Window") hidden, so the page gets no mouse
-// events at all (only the drag areas still work). Resizing by 1 px and back makes Chromium show it again.
-let reviveT = null, reviving = false;
-function revive() {
-  if (!FRAMELESS || reviving || !win || win.isDestroyed() || !win.isVisible() || win.isMinimized() || win.isFullScreen()) return;
-  reviving = true;
-  const b = win.getBounds();
-  win.setBounds({ ...b, width: b.width + 1 });
-  setTimeout(() => { if (win && !win.isDestroyed()) win.setBounds(b); reviving = false; }, 60);
+function applyShape() {
+  if (!FRAMELESS || !win || win.isDestroyed()) return;
+  const [w, h] = win.getSize();
+  win.setShape(win.isMaximized() || win.isFullScreen() || w < 3 * RADIUS || h < 3 * RADIUS ? [] : roundedShape(w, h, RADIUS));
 }
-// 'show' and 'restore' fire together when the window comes back: one nudge for both.
-const reviveSoon = () => { clearTimeout(reviveT); reviveT = setTimeout(revive, 120); };
+let shapeT = null;
+const shapeSoon = () => { clearTimeout(shapeT); shapeT = setTimeout(applyShape, 30); };
+const winState = () => { if (!win || win.isDestroyed()) return; win.webContents.send('win:state', { frameless: FRAMELESS, max: win.isMaximized() || win.isFullScreen() }); shapeSoon(); };
+function toggleMax() { if (win) win.isMaximized() ? win.unmaximize() : win.maximize(); }
 function refit() { // a monitor was plugged in or unplugged: resize for the screen the window is now on
-  const free = () => win && !maxed && !win.isMaximized() && !win.isFullScreen() && !saved;
+  const free = () => win && !win.isMaximized() && !win.isFullScreen() && !saved;
   if (free()) setTimeout(() => { if (free()) win.setBounds(sizeFor(screen.getDisplayMatching(win.getBounds()))); }, 900);
 }
 ipcMain.on('win', (_e, c) => { if (!win) return; if (c === 'min') win.minimize(); else if (c === 'max') toggleMax(); else if (c === 'close') win.close(); });
@@ -97,7 +96,7 @@ app.on('child-process-gone', (_e, d) => logLine('child process gone', d));
 function createWindow() {
   win = new BrowserWindow({
     ...sizeFor(screen.getDisplayNearestPoint(screen.getCursorScreenPoint())), minWidth: 380, minHeight: 300,
-    ...(FRAMELESS ? { frame: false, transparent: true, backgroundColor: '#00000000' } : { backgroundColor: '#171614' }),
+    ...(FRAMELESS ? { frame: false } : {}), backgroundColor: '#171614',
     title: 'Trenta e Lode', icon: ICON, autoHideMenuBar: true,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, backgroundThrottling: false },
   });
@@ -109,8 +108,9 @@ function createWindow() {
   win.on('responsive', () => logLine('window responsive again'));
   for (const ev of ['maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen']) win.on(ev, winState);
   win.on('minimize', () => { if (prefs.notch && !process.env.TL_SHOT) { win.hide(); showNotch(); } });
-  win.on('show', () => { hideNotch(); reviveSoon(); });
-  win.on('restore', () => { hideNotch(); reviveSoon(); });
+  win.on('show', hideNotch);
+  win.on('restore', hideNotch);
+  win.on('resize', shapeSoon);
   win.on('leave-full-screen', () => win.webContents.send('cmd', 'zen-exit'));
   win.on('closed', () => { win = null; [notch, pop].forEach(w => w && !w.isDestroyed() && w.destroy()); });
   // Links clicked inside the app open in the system browser.
@@ -648,6 +648,7 @@ ipcMain.handle('popup:history', () => popState.history);
 // TL_VIEWS=name[=urlencoded js],… ; "@wait-<ms>", "@notch…[=js]" captures the notch, "@pop-<kind>[=theme]" a popup.
 if (process.env.TL_SHOT) app.whenReady().then(async () => {
   const dir = process.env.TL_SHOT; fs.mkdirSync(dir, { recursive: true });
+  win.setBounds({ width: 1440, height: 900 });
   win.webContents.on('console-message', (e, lvl, msg, line, src) => { if (lvl >= 2) console.log('[renderer]', msg, src + ':' + line); });
   const wait = ms => new Promise(r => setTimeout(r, ms));
   await wait(3500);
