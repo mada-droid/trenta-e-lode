@@ -57,6 +57,19 @@ function toggleMax() {
   else { maxed = win.getBounds(); win.setBounds(screen.getDisplayMatching(maxed).workArea); }
   winState();
 }
+// Electron/Chromium bug with transparent windows on Windows: after the window is hidden (minimise → notch) and
+// shown again, Chromium leaves its input child window ("Chrome Legacy Window") hidden, so the page gets no mouse
+// events at all (only the drag areas still work). Resizing by 1 px and back makes Chromium show it again.
+let reviveT = null, reviving = false;
+function revive() {
+  if (!FRAMELESS || reviving || !win || win.isDestroyed() || !win.isVisible() || win.isMinimized() || win.isFullScreen()) return;
+  reviving = true;
+  const b = win.getBounds();
+  win.setBounds({ ...b, width: b.width + 1 });
+  setTimeout(() => { if (win && !win.isDestroyed()) win.setBounds(b); reviving = false; }, 60);
+}
+// 'show' and 'restore' fire together when the window comes back: one nudge for both.
+const reviveSoon = () => { clearTimeout(reviveT); reviveT = setTimeout(revive, 120); };
 function refit() { // a monitor was plugged in or unplugged: resize for the screen the window is now on
   const free = () => win && !maxed && !win.isMaximized() && !win.isFullScreen() && !saved;
   if (free()) setTimeout(() => { if (free()) win.setBounds(sizeFor(screen.getDisplayMatching(win.getBounds()))); }, 900);
@@ -70,6 +83,17 @@ function setAutostart(on) {
   if (app.getLoginItemSettings(o).openAtLogin !== o.openAtLogin) app.setLoginItemSettings(o);
 }
 
+// Problems are written to log.txt in the settings folder (kept under ~200 KB).
+function logLine(...a) {
+  try {
+    const f = path.join(app.getPath('userData'), 'log.txt');
+    if (fs.existsSync(f) && fs.statSync(f).size > 200e3) fs.renameSync(f, f + '.old');
+    fs.appendFileSync(f, new Date().toISOString() + ' ' + a.map(x => typeof x === 'string' ? x : JSON.stringify(x)).join(' ') + '\n');
+  } catch { /* ignore */ }
+}
+process.on('uncaughtException', e => logLine('main uncaughtException', e.stack || String(e)));
+app.on('child-process-gone', (_e, d) => logLine('child process gone', d));
+
 function createWindow() {
   win = new BrowserWindow({
     ...sizeFor(screen.getDisplayNearestPoint(screen.getCursorScreenPoint())), minWidth: 380, minHeight: 300,
@@ -79,10 +103,14 @@ function createWindow() {
   });
   win.loadFile(path.join(__dirname, 'src', 'index.html'));
   win.webContents.on('did-finish-load', winState);
+  // A crashed page reloads by itself instead of leaving a dead window.
+  win.webContents.on('render-process-gone', (_e, d) => { logLine('page process gone', d); if (d.reason !== 'clean-exit') setTimeout(() => win && !win.isDestroyed() && win.reload(), 1000); });
+  win.on('unresponsive', () => logLine('window unresponsive'));
+  win.on('responsive', () => logLine('window responsive again'));
   for (const ev of ['maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen']) win.on(ev, winState);
   win.on('minimize', () => { if (prefs.notch && !process.env.TL_SHOT) { win.hide(); showNotch(); } });
-  win.on('show', hideNotch);
-  win.on('restore', hideNotch);
+  win.on('show', () => { hideNotch(); reviveSoon(); });
+  win.on('restore', () => { hideNotch(); reviveSoon(); });
   win.on('leave-full-screen', () => win.webContents.send('cmd', 'zen-exit'));
   win.on('closed', () => { win = null; [notch, pop].forEach(w => w && !w.isDestroyed() && w.destroy()); });
   // Links clicked inside the app open in the system browser.
