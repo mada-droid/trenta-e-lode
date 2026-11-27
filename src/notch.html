@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file: data:; style-src 'self' 'unsafe-inline' file:; font-src 'self' file: data:">
+<link rel="stylesheet" href="theme.css">
+<style>
+  html, body { margin: 0; background: transparent; font: 13px/1.35 "Segoe UI", system-ui, sans-serif; overflow: hidden; user-select: none; }
+  #pill { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 380px; height: 42px; border-radius: 0 0 22px 22px;
+    background: #0d0c0b; color: #f1ebe0; box-shadow: 0 10px 30px rgba(0,0,0,.45), inset 0 -1px 0 rgba(255,255,255,.06);
+    transition: width .38s cubic-bezier(.2,.9,.25,1.15), height .38s cubic-bezier(.2,.9,.25,1.15), border-radius .38s; overflow: hidden; cursor: default; }
+  body.light #pill { background: #17153a; }
+  #pill.open { width: 580px; height: 168px; border-radius: 0 0 30px 30px; }
+  #pill.pulse { animation: pulse 1.2s ease 2; } @keyframes pulse { 50% { box-shadow: 0 0 0 4px var(--accent), 0 10px 30px rgba(0,0,0,.45); } }
+  .mini { position: absolute; inset: 0 0 auto 0; height: 42px; display: flex; align-items: center; gap: 10px; padding: 0 18px; transition: opacity .2s; }
+  #pill.open .mini { opacity: 0; pointer-events: none; }
+  .ring { width: 24px; height: 24px; flex: none; transform: rotate(-90deg); }
+  .t { font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .lbl { color: #a9a194; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sp { flex: 1; }
+  .pr { color: var(--accent2); font-size: 12px; white-space: nowrap; }
+  .bars { display: inline-flex; gap: 2px; align-items: flex-end; height: 12px; } .bars i { width: 3px; background: var(--accent); border-radius: 2px; animation: eq 1s infinite ease-in-out; }
+  .bars i:nth-child(2) { animation-delay: .2s } .bars i:nth-child(3) { animation-delay: .4s } @keyframes eq { 0%,100% { height: 3px } 50% { height: 12px } }
+  .full { position: absolute; inset: 0; padding: 14px 22px 16px; opacity: 0; transition: opacity .25s .1s; display: grid; grid-template-rows: auto auto auto; gap: 8px; }
+  #pill.open .full { opacity: 1; }
+  .row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.08); padding: 2px 10px; border-radius: 99px; font-size: 11.5px; white-space: nowrap; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .task { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+  .big { font-size: 38px; font-weight: 750; letter-spacing: -1px; font-variant-numeric: tabular-nums; line-height: 1; }
+  .prog { height: 6px; border-radius: 9px; background: rgba(255,255,255,.1); flex: 1; overflow: hidden; } .prog i { display: block; height: 100%; border-radius: 9px; }
+  button { border: 0; background: rgba(255,255,255,.1); color: #fff; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; font-size: 15px; display: grid; place-items: center; }
+  button:hover { background: rgba(255,255,255,.2); } button.pri { background: var(--accent); color: var(--accent-ink); }
+  .foot { color: #a9a194; font-size: 12px; }
+  .foot b { color: #f1ebe0; font-weight: 600; }
+  .ram { color: var(--gold); }
+</style>
+</head>
+<body>
+<div id="pill">
+  <div class="mini" id="mini"></div>
+  <div class="full" id="full"></div>
+</div>
+<script src="notch.js"></script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+/* Design tokens shared by the app, the popup and the notch.
+   Scuro: warm charcoal / sage / mustard / terracotta (lofi reference).
+   Chiaro: soft lavender, white cards, indigo accent, navy CTA (dashboard reference); teal + peach hero cards (countdown reference). */
+@font-face { font-family: 'Amiri Quran'; src: url('fonts/AmiriQuran-400.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Amiri'; src: url('fonts/Amiri-400.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Amiri'; src: url('fonts/Amiri-700.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+:root {
+  --bg: #171614; --bg-deco: radial-gradient(1200px 700px at 85% -10%, rgba(227,188,106,.07), transparent 60%), radial-gradient(900px 600px at -10% 110%, rgba(140,192,160,.07), transparent 60%);
+  --panel: #22211e; --panel2: #2b2926; --panel3: #34322d; --line: #393630; --text: #f1ebe0; --muted: #a9a194; --faint: #6f6a61;
+  --accent: #8cc0a0; --accent-ink: #12241a; --accent2: #e3bc6a; --terra: #d98b66; --plum: #a68bb0;
+  --ok: #7cc49a; --warn: #e3bc6a; --bad: #e0715f; --focus: #e0806a; --break: #8cc0a0;
+  --hero: linear-gradient(120deg, #24606f 0%, #3e7d86 45%, #b9a596 100%); --hero-ink: #fff;
+  --peach: #efcdb7; --peach-ink: #3b2519; --cta: #f1ebe0; --cta-ink: #1a1917;
+  --gold: #e3bc6a; --shadow: 0 14px 40px rgba(0,0,0,.38); --shadow-sm: 0 4px 14px rgba(0,0,0,.25);
+  --radius: 22px; --radius-sm: 14px;
+  --glass: rgba(30,28,25,.55);
+  color-scheme: dark;
+}
+body.light {
+  --bg: #ecebf6; --bg-deco: radial-gradient(900px 600px at 100% 0%, rgba(108,92,231,.10), transparent 60%), radial-gradient(800px 600px at 0% 100%, rgba(47,116,137,.08), transparent 60%);
+  --panel: #ffffff; --panel2: #f5f4fb; --panel3: #ebe9f7; --line: #e8e6f2; --text: #1d1b38; --muted: #6c6987; --faint: #a9a7be;
+  --accent: #6c5ce7; --accent-ink: #ffffff; --accent2: #8f84f0; --terra: #e07a5f; --plum: #9b7fd1;
+  --ok: #34a57d; --warn: #dd962d; --bad: #e5534b; --focus: #e5534b; --break: #34a57d;
+  --hero: linear-gradient(120deg, #2a6d82 0%, #4b8b9a 45%, #e9c6b3 100%); --hero-ink: #fff;
+  --peach: #f9dccb; --peach-ink: #3b2519; --cta: #17153a; --cta-ink: #ffffff;
+  --gold: #c99a2e; --shadow: 0 14px 40px rgba(60,50,140,.09); --shadow-sm: 0 4px 14px rgba(60,50,140,.07);
+  --glass: rgba(255,255,255,.6);
+  color-scheme: light;
+}
+.ar { font-family: 'Amiri Quran', 'Amiri', 'Traditional Arabic', serif; direction: rtl; }
