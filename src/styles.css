@@ -1,12 +1,9 @@
 /* Trenta e Lode · layout and components. Colours come from theme.css (Scuro / Chiaro). */
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
-/* Frameless, transparent window (Windows): the body is the rounded window. The gradient on <html> stops the body
-   background from spreading to the transparent canvas, so the corners stay see-through. */
-html { background: linear-gradient(transparent, transparent); }
-body.frameless { border-radius: 12px; clip-path: inset(0 round 12px); }
-body.frameless::after { content: ''; position: fixed; inset: 0; border-radius: inherit; border: 1px solid rgba(128,128,128,.22); pointer-events: none; z-index: 999; }
-body.frameless.maxed, body.frameless.zen { border-radius: 0; clip-path: none; } body.maxed::after, body.zen::after { display: none; }
+/* Frameless window (Windows): the main process rounds its corners with a window shape; this draws a faint edge along them. */
+body.frameless::after { content: ''; position: fixed; inset: 0; border-radius: 12px; border: 1px solid rgba(128,128,128,.22); pointer-events: none; z-index: 999; }
+body.maxed::after, body.zen::after { display: none; }
 body { display: flex; background: var(--bg); background-image: var(--bg-deco); color: var(--text); font: 14px/1.5 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; overflow: hidden; transition: background-color .3s, color .3s; }
 button, input, select, textarea { font: inherit; color: inherit; }
 a { color: var(--accent); }
