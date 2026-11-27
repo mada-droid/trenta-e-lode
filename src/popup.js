@@ -6,6 +6,13 @@ function close() { const c = document.querySelector('.card'); if (c) c.classList
 function chime() {
   try { const a = new AudioContext(); [[587, 0], [784, .22], [988, .44]].forEach(([f, d]) => { const o = a.createOscillator(), g = a.createGain(), t = a.currentTime + d; o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.18, t + .03); g.gain.exponentialRampToValueAtTime(.0001, t + 1.4); o.connect(g).connect(a.destination); o.start(t); o.stop(t + 1.5); }); } catch (e) { /* audio unavailable */ }
 }
+// The dhikr is an image: load and decode it before drawing the card, so the text never appears before it.
+let seq = 0;
+async function show(m) {
+  const my = ++seq;
+  if (m.type === 'dhikr' && m.img) { const im = new Image(); im.src = m.img; try { await im.decode(); } catch (e) { /* missing image: show the text anyway */ } }
+  if (my === seq) render(m);
+}
 function render(m) {
   cur = m;
   document.body.classList.toggle('light', m.theme === 'light');
@@ -37,7 +44,7 @@ function render(m) {
   }
   document.getElementById('root').innerHTML = `<div class="card ${cls}"><div class="hd">${hd}<button class="x" data-x>×</button></div><div class="body">${body}</div><div class="ft">${ft}</div><div class="timer"><i id="tb"></i></div></div>`;
   const send = () => ov.send('pop:size', Math.ceil(document.querySelector('.card').getBoundingClientRect().height + 20));
-  const img = document.querySelector('img'); if (img && !img.complete) img.onload = send; send();
+  send();
   total = left = (m.type === 'prayer' ? 90 : m.type === 'holiday' ? 60 : 35) * 1000; clearInterval(timer);
   timer = setInterval(() => { if (paused) return; left -= 100; document.getElementById('tb').style.transform = `scaleX(${Math.max(0, left / total)})`; if (left <= 0) close(); }, 100);
   if (m.type === 'prayer' && m.sound) chime();
@@ -50,4 +57,4 @@ document.addEventListener('click', e => {
   if (e.target.closest('[data-snooze]')) { ov.send('pop:snooze', cur); close(); }
 });
 document.addEventListener('toggle', () => ov.send('pop:size', Math.ceil(document.querySelector('.card').getBoundingClientRect().height + 20)), true);
-ov.on('pop:show', render);
+ov.on('pop:show', show);

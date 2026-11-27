@@ -21,6 +21,7 @@ Your subjects · a study plan built from your own files · Pomodoro with a lofi 
 - **Full-screen focus mode.** Pick one of six animated 120-second scenes (downloaded once), or, with a radio selected, let the live stream itself fill the screen. When the window is minimised, a small dynamic "notch" keeps the timer at the top of the screen.
 - **Prayer times anywhere (optional).** Choose your city: prayer times are computed on your computer for three years ahead (12 calculation methods, Shafiʿi or Hanafi ʿAsr), with the Hijri calendar, Ramaḍān and ʿĪd styling, prayer popups (never for Fajr), and gentle morning/evening adhkar and short Qur'an passages every few minutes. Everything can be turned off.
 - **Light and dark themes**, a guided tutorial, and a first-run setup wizard.
+- **A tidy window.** On Windows the app has no title bar: rounded corners with its own minimise, maximise and close buttons (drag it by the top bar). On large screens (3440×1440 and up) it opens at 1730×1100. On Windows and macOS it can start when you sign in (Settings).
 
 | | |
 |---|---|

@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('api', {
   notify: (t, b) => inv('notify', t, b),
   compact: on => inv('compact', on),
   fullscreen: on => inv('fullscreen', on),
+  win: c => ipcRenderer.send('win', c),
   openUrl: url => inv('url:open', url),
   offline: () => inv('offline:load'),
   prefs: p => ipcRenderer.send('prefs', p),

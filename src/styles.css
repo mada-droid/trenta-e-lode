@@ -1,6 +1,12 @@
 /* Trenta e Lode · layout and components. Colours come from theme.css (Scuro / Chiaro). */
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
+/* Frameless, transparent window (Windows): the body is the rounded window. The gradient on <html> stops the body
+   background from spreading to the transparent canvas, so the corners stay see-through. */
+html { background: linear-gradient(transparent, transparent); }
+body.frameless { border-radius: 12px; clip-path: inset(0 round 12px); }
+body.frameless::after { content: ''; position: fixed; inset: 0; border-radius: inherit; border: 1px solid rgba(128,128,128,.22); pointer-events: none; z-index: 999; }
+body.frameless.maxed, body.frameless.zen { border-radius: 0; clip-path: none; } body.maxed::after, body.zen::after { display: none; }
 body { display: flex; background: var(--bg); background-image: var(--bg-deco); color: var(--text); font: 14px/1.5 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; overflow: hidden; transition: background-color .3s, color .3s; }
 button, input, select, textarea { font: inherit; color: inherit; }
 a { color: var(--accent); }
@@ -49,6 +55,14 @@ body.light #mini-timer { background: rgba(255,255,255,.16); }
 #main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 body.light #main { margin: 14px 14px 14px 18px; background: #f8f8fc; border-radius: 34px; box-shadow: 0 20px 60px rgba(60,50,140,.10); overflow: hidden; }
 #top { display: flex; align-items: center; gap: 10px; padding: 16px 30px 6px; }
+body.frameless #top { -webkit-app-region: drag; padding-right: 14px; } body.frameless #top > :not(.sp) { -webkit-app-region: no-drag; }
+body.frameless #nav .brand { -webkit-app-region: drag; }
+#modal, #zen, #toast, #radio, #onb, #tour, .drop { -webkit-app-region: no-drag; }
+.wctl { display: none; gap: 2px; margin-left: 6px; } body.frameless .wctl { display: flex; }
+.onb-wbar { display: none; } body.frameless .onb-wbar { display: flex; justify-content: flex-end; align-items: center; position: absolute; top: 0; left: 0; right: 0; height: 46px; padding: 0 14px; -webkit-app-region: drag; } .onb-wbar .wctl { -webkit-app-region: no-drag; }
+.wctl button { width: 34px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 9px; background: none; color: var(--muted); cursor: pointer; }
+.wctl button:hover { background: var(--panel2); color: var(--text); } .wctl button.x:hover { background: #e5484d; color: #fff; }
+.wctl svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linecap: round; }
 .search { position: relative; display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 0 10px 0 12px; width: min(380px, 34vw); color: var(--muted); }
 .search input { border: 0; background: none; outline: none; padding: 9px 0; flex: 1; color: var(--text); min-width: 0; }
 .search kbd { font: 11px "Segoe UI"; background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; color: var(--faint); }

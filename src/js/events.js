@@ -210,6 +210,7 @@ document.addEventListener('click', async e => {
     case 'theme': S.settings.theme = d.t; document.body.classList.toggle('light', d.t === 'light'); save(); sendPrefs(); topbar(); render(); break;
     case 'bell': {
       const h = S.popHist || [];
+      if ($('#bell')?.classList.contains('on')) { $('#bell').classList.remove('on'); break; } // a second click closes it
       S.unseen = 0; topbar(); const nb = $('#bell');
       nb.innerHTML = `<div class="row" style="padding:10px 12px 6px"><b>Reminders</b><span class="sp"></span><button class="btn sm ghost" data-a="pop-test" data-k="dhikr">Dhikr now</button><button class="btn sm ghost" data-a="pop-test" data-k="verse">Verse</button></div>
         ${h.slice(0, 10).map(x => `<div class="nrow"><span class="ni">${x.type === 'prayer' ? '🕌' : x.type === 'verse' ? '۞' : x.type === 'dhikr' ? '☾' : '☪'}</span><span class="ell" style="flex:1"><b>${esc(x.title)}</b><small>${{ prayer: 'Prayer', verse: 'Verse', dhikr: 'Dhikr', holiday: 'Special day' }[x.type]}</small></span><span class="faint small">${new Date(x.at).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' })}</span></div>`).join('') || '<div class="small muted" style="padding:10px 12px 14px">No reminders yet: the first one arrives a couple of minutes after the app starts.</div>'}`;
@@ -320,7 +321,7 @@ document.addEventListener('submit', async e => {
   if (kind === 'settings') {
     const s = S.settings;
     for (const k of ['focus', 'short', 'long', 'longEvery', 'dailyGoal', 'newCardsPerDay']) s[k] = +fd[k];
-    for (const k of ['autoBreak', 'autoFocus', 'sound', 'notch']) s[k] = !!fd[k];
+    for (const k of ['autoBreak', 'autoFocus', 'sound', 'notch', 'autostart']) s[k] = !!fd[k];
     s.name = (fd.name || '').trim(); s.videoLang = (fd.videoLang || 'English').trim() || 'English';
     s.theme = fd.theme; document.body.classList.toggle('light', s.theme === 'light');
     if (!P.running) P.left = modeLen(P.mode);
@@ -373,6 +374,10 @@ window.api.on('cmd', c => {
   if (c === 'zen') zenOn();
   if (c === 'zen-exit' && zen) { zen = false; document.body.classList.remove('zen', 'zen-yt'); $('#zen').innerHTML = ''; radioCover(); render(); }
 });
+// Frameless window (Windows): our own buttons, drag by the top bar, double-click to maximise.
+document.addEventListener('click', e => { const b = e.target.closest('[data-w]'); if (b) window.api.win(b.dataset.w); });
+document.addEventListener('dblclick', e => { if (document.body.classList.contains('frameless') && e.target.closest('#top') && !e.target.closest('button, input, select, .search, .seg, .drop')) window.api.win('max'); });
+window.api.on('win:state', s => { document.body.classList.toggle('frameless', !!s.frameless); document.body.classList.toggle('maxed', !!s.max); });
 window.api.on('popup:history', h => { S.popHist = h; S.unseen = (S.unseen || 0) + 1; topbar(); if (view === 'prayers') render(); });
 window.api.on('content:progress', p => { const t = `${p.step}: ${p.i} / ${p.n}`; ONB.dl = t; const el = $('#dl-prog'); if (el) el.textContent = t; });
 
@@ -389,7 +394,7 @@ window.api.on('content:progress', p => { const t = `${p.step}: ${p.i} / ${p.n}`;
   for (const k of SUBKEYS) delete S[k];
   const h = await window.api.hubInit(S.settings.hub || null);
   S.settings.hub = h.hub; OFFL.hub = h.hub; OFFL.hubUrl = h.hubUrl;
-  const info = await window.api.info(); METHODS = info.methods; REPO_URL = info.repo || REPO_URL;
+  const info = await window.api.info(); APPINFO = info; METHODS = info.methods; REPO_URL = info.repo || REPO_URL;
   document.body.classList.toggle('light', S.settings.theme === 'light');
   sendPrefs();
   try { OFFL = { ...OFFL, ...(await window.api.offline()) }; } catch (e) { console.warn(e); }

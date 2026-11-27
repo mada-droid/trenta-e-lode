@@ -30,19 +30,56 @@ let win, notch = null, pop = null;
 let hub = null;
 let prefs = {
   theme: 'dark', notch: true, islamic: true, prayerPopups: true, prayers: { dhuhr: true, asr: true, maghrib: true, isha: true }, prayerSound: true,
-  adhkar: true, adhkarEvery: 10, verses: true, dndSim: true, hijriOffset: 0, holidayPopups: true, location: null,
+  adhkar: true, adhkarEvery: 10, verses: true, dndSim: true, hijriOffset: 0, holidayPopups: true, location: null, autostart: false,
 };
 let status = {};
 const OV_PRELOAD = path.join(__dirname, 'preload-overlay.js');
 const ICON = path.join(__dirname, 'build', 'icon.png');
 
+// ─── Window: size, frameless rounded window (Windows), start at login ────
+// On Windows the window has no title bar: the page draws rounded corners and its own min/max/close buttons.
+// macOS and Linux keep the native frame.
+const FRAMELESS = process.platform === 'win32' && !process.env.TL_SHOT;
+// Big screens (3440×1440 ultrawide and up) get a 1730×1100 window, others 1440×900; never larger than the screen.
+function sizeFor(d) {
+  const sf = d.scaleFactor || 1, wa = d.workArea;
+  const wide = Math.round(d.size.width * sf) >= 3440 && Math.round(d.size.height * sf) >= 1440;
+  const w = Math.min(wide ? Math.round(1730 / sf) : 1440, wa.width);
+  const h = Math.min(wide ? Math.round(1100 / sf) : 900, wa.height);
+  return { width: w, height: h, x: Math.round(wa.x + (wa.width - w) / 2), y: Math.round(wa.y + (wa.height - h) / 2) };
+}
+let maxed = null; // bounds before our own maximise (transparent windows can't use the native one)
+const winState = () => win && !win.isDestroyed() && win.webContents.send('win:state', { frameless: FRAMELESS, max: FRAMELESS ? !!maxed || win.isFullScreen() : win.isMaximized() || win.isFullScreen() });
+function toggleMax() {
+  if (!win) return;
+  if (!FRAMELESS) win.isMaximized() ? win.unmaximize() : win.maximize();
+  else if (maxed) { win.setBounds(maxed); maxed = null; }
+  else { maxed = win.getBounds(); win.setBounds(screen.getDisplayMatching(maxed).workArea); }
+  winState();
+}
+function refit() { // a monitor was plugged in or unplugged: resize for the screen the window is now on
+  const free = () => win && !maxed && !win.isMaximized() && !win.isFullScreen() && !saved;
+  if (free()) setTimeout(() => { if (free()) win.setBounds(sizeFor(screen.getDisplayMatching(win.getBounds()))); }, 900);
+}
+ipcMain.on('win', (_e, c) => { if (!win) return; if (c === 'min') win.minimize(); else if (c === 'max') toggleMax(); else if (c === 'close') win.close(); });
+const CAN_AUTOSTART = process.platform === 'win32' || process.platform === 'darwin';
+function setAutostart(on) {
+  if (!CAN_AUTOSTART || process.env.TL_SHOT) return;
+  const o = { openAtLogin: !!on };
+  if (!app.isPackaged && process.platform === 'win32') Object.assign(o, { path: process.execPath, args: [app.getAppPath()] });
+  if (app.getLoginItemSettings(o).openAtLogin !== o.openAtLogin) app.setLoginItemSettings(o);
+}
+
 function createWindow() {
   win = new BrowserWindow({
-    width: 1440, height: 900, minWidth: 380, minHeight: 300, backgroundColor: '#171614',
+    ...sizeFor(screen.getDisplayNearestPoint(screen.getCursorScreenPoint())), minWidth: 380, minHeight: 300,
+    ...(FRAMELESS ? { frame: false, transparent: true, backgroundColor: '#00000000' } : { backgroundColor: '#171614' }),
     title: 'Trenta e Lode', icon: ICON, autoHideMenuBar: true,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, backgroundThrottling: false },
   });
   win.loadFile(path.join(__dirname, 'src', 'index.html'));
+  win.webContents.on('did-finish-load', winState);
+  for (const ev of ['maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen']) win.on(ev, winState);
   win.on('minimize', () => { if (prefs.notch && !process.env.TL_SHOT) { win.hide(); showNotch(); } });
   win.on('show', hideNotch);
   win.on('restore', hideNotch);
@@ -59,6 +96,8 @@ app.whenReady().then(() => {
     cb({ requestHeaders: d.requestHeaders });
   });
   createWindow();
+  screen.on('display-added', refit);
+  screen.on('display-removed', refit);
   if (!process.env.TL_SHOT) { setInterval(schedTick, 15000); setTimeout(schedTick, 8000); }
 });
 app.on('window-all-closed', () => app.quit());
@@ -182,7 +221,7 @@ ipcMain.handle('geo:search', async (_e, q) => {
   return (j.results || []).map(r => ({ name: r.name, region: [r.admin1, r.country].filter(Boolean).join(', '), lat: r.latitude, lon: r.longitude, tz: r.timezone, cc: r.country_code,
     method: METHOD_BY_COUNTRY[r.country_code] || 'MuslimWorldLeague', madhab: HANAFI_COUNTRIES.has(r.country_code) ? 'Hanafi' : 'Shafi' }));
 });
-ipcMain.handle('app:info', () => ({ methods: METHODS, repo: REPO, version: PKG.version, tz: Intl.DateTimeFormat().resolvedOptions().timeZone }));
+ipcMain.handle('app:info', () => ({ methods: METHODS, repo: REPO, version: PKG.version, tz: Intl.DateTimeFormat().resolvedOptions().timeZone, canAutostart: CAN_AUTOSTART }));
 function buildPrayerTable(loc) {
   const coords = new adhan.Coordinates(+loc.lat, +loc.lon);
   const params = adhan.CalculationMethod[loc.method in METHODS ? loc.method : 'MuslimWorldLeague']();
@@ -313,6 +352,7 @@ ipcMain.handle('bg:download', async (e, file) => {
 ipcMain.on('prefs', (_e, p) => {
   const locChanged = p.location && JSON.stringify(p.location) !== JSON.stringify(prefs.location);
   prefs = { ...prefs, ...p };
+  if ('autostart' in p) setAutostart(p.autostart);
   if (p.hub && p.hub !== hub) setHub(p.hub);
   else if (locChanged && hub) ensurePrayerTable(false);
 });
