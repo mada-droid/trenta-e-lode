@@ -195,6 +195,7 @@ document.addEventListener('click', async e => {
     case 'subj-pick': switchSubject(d.id); break;
     case 'subj-add': sub_menu = false; subjectModal(); break;
     case 'subj-edit': subjectModal(subjects().find(x => x.id === d.id)); break;
+    case 'passed-del': S.passed = (S.passed || []).filter(x => x.id !== d.id); save(); if (!$('#onb').classList.contains('hidden')) onbRender(); else render(); break;
     case 'subj-del': { const s = subjects().find(x => x.id === d.id);
       modal(`<h2>Remove “${esc(s.name)}”?</h2><p>Its folder (with the files you uploaded) is moved to the Recycle Bin, so you can still restore it from there. Its plan, flashcard progress and mistakes are removed from the app.</p>
         <div class="row"><button class="btn danger-fill" data-a="subj-del-yes" data-id="${s.id}">Remove the subject</button><button class="btn ghost" data-a="modal-close">Cancel</button></div>`); break; }
@@ -329,8 +330,17 @@ document.addEventListener('submit', async e => {
     if (!P.running) P.left = modeLen(P.mode);
     save(); sendPrefs(); toast('Settings saved'); topbar(); render();
   }
+  if (kind === 'passed-add') {
+    const name = (fd.name || '').trim(); if (!name) return;
+    if (fd.date && fd.date > today()) return toast('A passed exam cannot be in the future: add it as a subject instead.');
+    (S.passed ||= []).push({ id: 'p' + uid(), name, date: fd.date || '', grade: (fd.grade || '').trim() });
+    save(); SFX.tick(0.8); toast(name + ' added to the passed exams');
+    if (!$('#onb').classList.contains('hidden')) onbRender(); else render();
+  }
   if (kind === 'subj-save' || kind === 'onb-subj') {
     const id = f.dataset.id, name = (fd.name || '').trim(); if (!name) return;
+    const prev = id && subjects().find(x => x.id === id);
+    if (fd.exam && fd.exam < today() && (!prev || prev.exam !== fd.exam)) return toast('Pick today or a later date: past exams go in “Exams already passed”.');
     let s = id && subjects().find(x => x.id === id);
     const before = s ? s.exam + '|' + s.start : '';
     if (s) {

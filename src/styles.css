@@ -501,3 +501,36 @@ code { font-family: ui-monospace, Consolas, monospace; font-size: 12px; backgrou
 .sk-why .lbl { font-weight: 700; color: var(--c); }
 .sk-more summary { cursor: pointer; color: var(--muted); margin-top: 6px; }
 .sk-claude ol { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+
+/* Collapsible and resizable menu (nav.js) */
+#nav { transition: width .22s ease, padding .22s ease; }
+body.nav-dragging #nav { transition: none; } body.nav-dragging { cursor: col-resize; user-select: none; }
+.nav-toggle { position: absolute; top: 26px; right: -12px; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); color: var(--text); display: grid; place-items: center; cursor: pointer; z-index: 6; box-shadow: var(--shadow-sm); opacity: 0; transition: opacity .15s; -webkit-app-region: no-drag; padding: 0; }
+.nav-toggle svg { transition: transform .22s; }
+#nav:hover .nav-toggle, body.nav-mini .nav-toggle { opacity: 1; }
+body.nav-mini .nav-toggle svg { transform: rotate(180deg); }
+.nav-grip { position: absolute; top: 0; bottom: 0; right: -4px; width: 8px; cursor: col-resize; z-index: 5; -webkit-app-region: no-drag; }
+.nav-grip:hover, body.nav-dragging .nav-grip { background: linear-gradient(90deg, transparent 3px, var(--accent) 3px, var(--accent) 5px, transparent 5px); }
+body.nav-mini #nav { width: 78px; padding-left: 10px; padding-right: 10px; }
+body.nav-mini .brand > div, body.nav-mini #menu .lb, body.nav-mini .subj-btn .nm, body.nav-mini .subj-btn > svg, body.nav-mini #mini-timer > div:not(.mt-ring) { display: none; }
+body.nav-mini .brand { justify-content: center; padding: 2px 0 4px; }
+body.nav-mini #menu .grp { font-size: 0; padding: 6px 0 3px; } body.nav-mini #menu .grp::after { content: ''; display: block; height: 1px; margin: 0 14px; background: currentColor; opacity: .35; }
+body.nav-mini #menu button { justify-content: center; padding: 8px 0; position: relative; }
+body.nav-mini #menu .badge { position: absolute; top: 0; right: 3px; margin: 0; font-size: 9.5px; padding: 0 5px; }
+body.nav-mini .subj-btn { justify-content: center; padding: 8px 0; }
+body.nav-mini #mini-timer { justify-content: center; padding: 10px 0; }
+body.nav-mini .subj-list { right: auto; width: 300px; }
+
+.onb-sec { margin-top: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 16px; }
+.onb-sec h3 { margin: 0 0 2px; } .onb-sec > p { margin: 0 0 8px; }
+
+/* dd/mm/yyyy date fields (datefield.js) */
+.dmy-wrap { position: relative; display: flex; align-items: center; min-width: 0; }
+.dmy-wrap .dmy { flex: 1; width: 100%; min-width: 0; padding-right: 34px; }
+.dmy-wrap .dmy.bad { border-color: var(--bad); box-shadow: 0 0 0 2px rgba(224,113,95,.25); }
+.dmy-btn { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: 0; background: none; color: var(--muted); cursor: pointer; padding: 4px; display: grid; place-items: center; border-radius: 8px; }
+.dmy-btn:hover { color: var(--text); background: var(--panel3); }
+.dmy-wrap .dmy-native { position: absolute; left: 0; bottom: 0; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0; pointer-events: none; }
+.onb-add[data-form=passed-add] { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, .8fr) auto; }
+.onb-add > * { min-width: 0; }
+.card.grid:not(.g2):not(.g3):not(.g4) { grid-template-columns: minmax(0, 1fr); } /* long paths/names never widen a card */

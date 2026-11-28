@@ -25,7 +25,9 @@ Your subjects · a study plan built from your own files · Pomodoro with a lofi 
 - **Cross off days.** Double right-click a day in the *Study plan* calendar to cross it out with an X (do it again to remove it).
 - **Motivating sounds.** Soft sounds when you hover buttons and tabs; a tick that climbs in pitch as today's plan fills up; a fanfare when every task of the day is done, and bigger ones for the daily Pomodoro goal, finishing today's flashcards, catching up on overdue tasks and completing a whole phase. All synthesised offline; turn them off in Settings → *Interface sounds*.
 - **Automatic updates.** When you are online the app checks for a new release: by default it downloads it in the background and installs it when you close the app, and a popup tells you when it is ready. Both behaviours can be turned off in Settings → *Updates* (the portable version shows a download link instead).
-- **Light and dark themes**, a guided tutorial, and a first-run setup wizard.
+- **A menu that gets out of the way.** Collapse the left menu to icons (the round button on its edge or Ctrl+B) and drag its edge to make it wider or narrower.
+- **Day/month/year dates** everywhere: type `25/12/2026` or pick from the calendar.
+- **Light and dark themes**, a guided tutorial, and a first-run setup wizard (with separate lists for upcoming exams and exams already passed, with grades).
 - **A tidy window.** On Windows the app has no title bar: rounded corners with its own minimise, maximise and close buttons (drag it by the top bar). On large screens (3440×1440 and up) it opens at 1730×1100. On Windows and macOS it can start when you sign in (Settings).
 
 | | |

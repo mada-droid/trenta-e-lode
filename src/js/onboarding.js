@@ -14,10 +14,17 @@ function onbRender() {
     <label class="f">What should we call you? (optional)<input type="text" id="onb-name" value="${esc(s.name)}" placeholder="Your first name"></label>
     <div class="f">Theme<div class="seg big"><button class="${s.theme === 'light' ? 'on' : ''}" data-a="onb-theme" data-t="light">${ic('sun', 16)} Light</button><button class="${s.theme === 'dark' ? 'on' : ''}" data-a="onb-theme" data-t="dark">${ic('moon', 16)} Dark</button></div></div>
     <div class="f">Data folder (your files, AI requests, offline data)<div class="row"><code class="ell" style="flex:1">${esc(OFFL.hub)}</code><button class="btn sm" data-a="hub-change">Change…</button></div></div>`;
-  if (ONB.step === 1) body = `
-    <h2>Which subjects are you studying?</h2><p class="muted">Add one or more now (you can add, rename or remove them later). The exam date lets the app plan backwards from it.</p>
-    <form class="onb-add" data-form="onb-subj"><input type="text" name="name" placeholder="Subject name, e.g. Linear Algebra" required><input type="date" name="exam" title="Exam date (optional)"><button class="btn pri">Add</button></form>
-    <div class="onb-list">${subjects().map(x => `<div class="row"><span class="dot" style="background:${x.color};width:12px;height:12px"></span><b style="flex:1">${esc(x.name)}</b><span class="small muted">${x.exam ? 'exam ' + fmtDay(x.exam, { day: 'numeric', month: 'short', year: 'numeric' }) : 'no exam date'}</span><button class="btn sm ghost" data-a="subj-edit" data-id="${x.id}">Edit</button></div>`).join('') || '<div class="small faint">No subjects yet.</div>'}</div>`;
+  if (ONB.step === 1) {
+    const t = today(), up = subjects().filter(x => !x.exam || x.exam >= t), old = subjects().filter(x => x.exam && x.exam < t);
+    body = `
+    <h2>Which subjects are you studying?</h2><p class="muted">Add them now (you can rename or remove them later). Dates are day/month/year.</p>
+    <div class="onb-sec"><h3>📅 Upcoming exams</h3><p class="small muted">The app plans backwards from the exam date, so it must be today or later (or leave it empty).</p>
+      <form class="onb-add" data-form="onb-subj"><input type="text" name="name" placeholder="Subject name, e.g. Linear Algebra" required><input type="date" name="exam" min="${t}" title="Exam date (optional)"><button class="btn pri">Add</button></form>
+      <div class="onb-list">${up.map(x => `<div class="row"><span class="dot" style="background:${x.color};width:12px;height:12px"></span><b style="flex:1">${esc(x.name)}</b><span class="small muted">${x.exam ? 'exam ' + dmy(x.exam) : 'no exam date'}</span><button class="btn sm ghost" data-a="subj-edit" data-id="${x.id}">Edit</button></div>`).join('') || '<div class="small faint">No subjects yet.</div>'}</div></div>
+    <div class="onb-sec"><h3>✓ Exams already passed</h3><p class="small muted">Optional: exams you have already taken, with the grade, so you keep a record of them.</p>
+      ${passedForm()}
+      <div class="onb-list">${old.map(x => `<div class="row"><span class="dot" style="background:${x.color};width:12px;height:12px"></span><b style="flex:1">${esc(x.name)}</b><span class="small muted">exam was ${dmy(x.exam)}: set the next date</span><button class="btn sm ghost" data-a="subj-edit" data-id="${x.id}">Edit</button></div>`).join('')}${passedRows()}</div></div>`;
+  }
   if (ONB.step === 2) body = `
     <h2>Prayer times and Islamic reminders</h2><p class="muted">Prayer times for your city (computed offline), the Hijri calendar, Ramaḍān and ʿĪd styling, and gentle adhkar / Qur’an reminders while you study.</p>
     <div class="seg big"><button class="${islamicOn() ? 'on' : ''}" data-a="onb-islamic" data-v="1">Yes, turn them on</button><button class="${!islamicOn() ? 'on' : ''}" data-a="onb-islamic" data-v="0">No thanks</button></div>
@@ -34,6 +41,7 @@ function onbRender() {
       ${ONB.step < 3 ? `<button class="btn pri" data-a="onb-next">${ONB.step === 1 && !hasSubjects() ? 'Skip for now' : 'Next'} →</button>` : '<button class="btn ghost" data-a="onb-finish">Skip the tour</button><button class="btn cta" data-a="onb-finish" data-tour="1">Start the tour</button>'}</div>`;
 }
 async function onbAction(a, d, el) {
+  const nm = $('#onb-name'); if (nm) S.settings.name = nm.value.trim(); // keep the typed name when the theme re-renders the step
   if (a === 'onb-next') { if (ONB.step === 0) { S.settings.name = ($('#onb-name')?.value || '').trim(); save(); } ONB.step++; onbRender(); }
   if (a === 'onb-back') { ONB.step--; onbRender(); }
   if (a === 'onb-theme') { S.settings.theme = d.t; document.body.classList.toggle('light', d.t === 'light'); save(); sendPrefs(); onbRender(); }
@@ -93,3 +101,15 @@ function tourShow() {
   }, 120));
 }
 window.addEventListener('resize', () => { if (!$('#tour').classList.contains('hidden')) tourShow(); });
+
+// ─── Exams already passed (S.passed): a simple record with the grade ─────
+const dmy = d => d ? d.split('-').reverse().join('/') : '';
+function passedForm() {
+  return `<form class="onb-add" data-form="passed-add"><input type="text" name="name" placeholder="Subject, e.g. Calculus I" required><input type="date" name="date" max="${today()}" title="Exam date"><input type="text" name="grade" placeholder="Grade (e.g. 28, A)" style="max-width:150px"><button class="btn">Add</button></form>`;
+}
+function passedRows() {
+  return (S.passed || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(x => `<div class="row"><span class="dot" style="background:var(--ok);width:12px;height:12px"></span><b style="flex:1">${esc(x.name)}</b><span class="small muted">${x.date ? dmy(x.date) : ''}</span>${x.grade ? `<span class="pill">${esc(x.grade)}</span>` : ''}<button class="btn sm ghost danger" data-a="passed-del" data-id="${x.id}" title="Remove">✕</button></div>`).join('');
+}
+function passedCard() {
+  return `<div class="card grid"><div class="row"><h2 style="margin:0">Exams already passed</h2><span class="sp"></span><span class="small muted">${(S.passed || []).length || ''}</span></div>${passedForm()}<div class="onb-list">${passedRows() || '<div class="small faint">None yet.</div>'}</div></div>`;
+}

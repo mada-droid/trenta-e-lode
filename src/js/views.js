@@ -713,7 +713,8 @@ V.settings = () => {
   return `<h1>Settings</h1><p class="sub">Everything is saved automatically on your computer.</p>
   <div class="grid g2" style="align-items:start">
     <div class="card grid"><div class="row"><h2 style="margin:0">Subjects</h2><span class="sp"></span><button class="btn sm pri" data-a="subj-add">+ Add</button></div>
-      ${subjects().map(x => `<div class="row subj-row"><span class="dot" style="background:${x.color};width:12px;height:12px"></span><div style="flex:1;min-width:0"><b class="ell" style="display:block">${esc(x.name)}</b><small class="muted">${esc(x.code ? x.code + ' · ' : '')}${x.exam ? 'exam ' + fmtDay(x.exam, { day: 'numeric', month: 'short', year: 'numeric' }) : 'no exam date'}</small></div><button class="btn sm ghost" data-a="subj-edit" data-id="${x.id}">Edit</button></div>`).join('') || '<div class="small muted">No subjects yet.</div>'}</div>
+      ${subjects().map(x => `<div class="row subj-row"><span class="dot" style="background:${x.color};width:12px;height:12px"></span><div style="flex:1;min-width:0"><b class="ell" style="display:block">${esc(x.name)}</b><small class="muted">${esc(x.code ? x.code + ' · ' : '')}${x.exam ? 'exam ' + dmy(x.exam) : 'no exam date'}</small></div><button class="btn sm ghost" data-a="subj-edit" data-id="${x.id}">Edit</button></div>`).join('') || '<div class="small muted">No subjects yet.</div>'}</div>
+    ${passedCard()}
     <form data-form="settings" class="card grid"><h2 style="margin:0">Pomodoro</h2>
       <div class="grid g4"><label class="f">Focus (min)<input type="number" name="focus" min="5" max="90" value="${s.focus}"></label><label class="f">Short break<input type="number" name="short" min="1" max="30" value="${s.short}"></label><label class="f">Long break<input type="number" name="long" min="5" max="60" value="${s.long}"></label><label class="f">Long every<input type="number" name="longEvery" min="2" max="8" value="${s.longEvery}"></label></div>
       <label class="f">Daily goal (Pomodoros, all subjects together)<input type="number" name="dailyGoal" min="1" max="20" value="${s.dailyGoal}"></label>
@@ -751,7 +752,7 @@ function subjectModal(s) {
   modal(`<h2>${s ? 'Edit subject' : 'New subject'}</h2><form data-form="subj-save" data-id="${s ? s.id : ''}" class="grid">
     <label class="f">Name<input type="text" name="name" value="${esc(x.name)}" required placeholder="e.g. Data Structures and Algorithms"></label>
     <div class="grid g2"><label class="f">Code (optional)<input type="text" name="code" value="${esc(x.code)}" placeholder="e.g. CS-201"></label>
-      <label class="f">Exam date (optional)<input type="date" name="exam" value="${esc(x.exam)}"></label></div>
+      <label class="f">Exam date (optional)<input type="date" name="exam" value="${esc(x.exam)}" ${!x.exam || x.exam >= today() ? `min="${today()}"` : ''}></label></div>
     <label class="f">Start studying from (optional)<input type="date" name="start" value="${esc(x.start)}"></label>
     <div class="f">Colour<div class="swatches">${SUBJ_COLORS.map(c => `<label><input type="radio" name="color" value="${c}" ${x.color === c ? 'checked' : ''}><span style="background:${c}"></span></label>`).join('')}</div></div>
     <div class="row"><button class="btn pri">${s ? 'Save' : 'Add subject'}</button><button type="button" class="btn ghost" data-a="modal-close">Cancel</button><span class="sp"></span>${s ? `<button type="button" class="btn ghost danger" data-a="subj-del" data-id="${s.id}">Remove…</button>` : ''}</div></form>`);
