@@ -30,7 +30,7 @@ const TOPIC_COLORS = ['#8cc0a0', '#e3bc6a', '#d98b66', '#7ea6d8', '#b392d6', '#6
 const SUBJ_COLORS = ['#7c8cff', '#e3a23c', '#3fae8c', '#d9534f', '#a45bd1', '#45b5c4', '#e58fa8', '#8bb03a', '#c9744f', '#5b8def'];
 
 // ─── Subjects (created by the student) ───────────────────────────────────
-const SUBKEYS = ['plan', 'moved', 'extra', 'cards', 'cardLog', 'mastery', 'know', 'sims', 'videos', 'outcome', 'exams'];
+const SUBKEYS = ['plan', 'moved', 'extra', 'cards', 'cardLog', 'mastery', 'know', 'sims', 'videos', 'outcome', 'exams', 'crossed'];
 const NOSUBJ = { id: '', name: 'No subject yet', code: '', color: '#8cc0a0', folder: '', exam: '', start: '' };
 let CUR = '', SUBJ = null, topicById = {}, SDATA = {}, TASKIDX = {};
 let OFFL = { prayer: null, adhkar: [], verses: [], hub: '', hubUrl: '' };
@@ -102,7 +102,7 @@ const DEFAULT = () => ({
   v: 1, created: today(), onboarded: false, toured: false,
   subjects: [],
   settings: {
-    name: '', focus: 25, short: 5, long: 15, longEvery: 4, dailyGoal: 8, autoBreak: true, autoFocus: false, sound: true, theme: 'dark', newCardsPerDay: 12,
+    name: '', focus: 25, short: 5, long: 15, longEvery: 4, dailyGoal: 8, autoBreak: true, autoFocus: false, sound: true, uiSound: true, autoUpdate: true, updateNotify: true, theme: 'dark', newCardsPerDay: 12,
     subject: '', notch: true, hub: '', videoLang: 'English', lofi: { src: 'gen', vol: 0.6, auto: true }, zenBg: 'collina',
     islamic: true, location: null, prayerPopups: true, prayers: { dhuhr: true, asr: true, maghrib: true, isha: true }, prayerSound: true,
     adhkar: true, adhkarEvery: 10, verses: true, dndSim: true, hijriOffset: 0, holidayPopups: true, autostart: false,
@@ -118,7 +118,8 @@ function save() {
 function sendPrefs() {
   const s = S.settings;
   window.api.prefs({ theme: s.theme, notch: s.notch, hub: OFFL.hub, islamic: s.islamic, location: s.location, prayerPopups: s.prayerPopups, prayers: s.prayers, prayerSound: s.prayerSound,
-    adhkar: s.adhkar, adhkarEvery: s.adhkarEvery, verses: s.verses, dndSim: s.dndSim, hijriOffset: s.hijriOffset, holidayPopups: s.holidayPopups, autostart: !!s.autostart });
+    adhkar: s.adhkar, adhkarEvery: s.adhkarEvery, verses: s.verses, dndSim: s.dndSim, hijriOffset: s.hijriOffset, holidayPopups: s.holidayPopups, autostart: !!s.autostart,
+    autoUpdate: s.autoUpdate !== false, updateNotify: s.updateNotify !== false });
 }
 const islamicOn = () => S.settings.islamic !== false;
 
@@ -281,6 +282,7 @@ function dueCards() {
   return [...due, ...fresh.slice(0, Math.max(0, S.settings.newCardsPerDay - newToday))];
 }
 function grade(i, q) { // q: 0 again · 1 hard · 2 good · 3 easy
+  const had = dueCards().length;
   const s = { ...cardState(i) };
   if (!S.cards[i]) S.cardLog[i] = today();
   if (q === 0) { s.reps = 0; s.int = 0; s.ef = Math.max(1.3, s.ef - 0.2); s.due = today(); }
@@ -291,6 +293,7 @@ function grade(i, q) { // q: 0 again · 1 hard · 2 good · 3 easy
     s.due = addDays(today(), s.int);
   }
   S.cards[i] = s; save();
+  if (had && !dueCards().length) { SFX.goal(); toast('All of today’s flashcards done! 🎉'); }
 }
 
 // ─── Topic progress ──────────────────────────────────────────────────────
@@ -369,6 +372,7 @@ function pDone() {
     window.api.notify('🍅 Pomodoro complete!', `${n} of ${S.settings.dailyGoal} today. ${n % S.settings.longEvery === 0 ? 'Long break: stand up and move.' : 'Short break.'}`);
   } else window.api.notify('Break is over', 'Back to: ' + (P.task?.title || 'a new Pomodoro'));
   chime(P.mode === 'focus');
+  if (P.mode === 'focus' && pomodoriOn(today()) === S.settings.dailyGoal) setTimeout(() => { SFX.goal(); toast('Daily Pomodoro goal reached! 🍅🎉'); }, 1100);
   pNext();
   if (view === 'today' || view === 'stats' || view === 'pomodoro') render();
 }

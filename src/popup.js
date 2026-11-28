@@ -36,6 +36,13 @@ function render(m) {
     body = `<div class="big"><b>${esc(m.name)}</b><span>${esc(m.hhmm)}</span><span class="ar">${esc(m.ar)}</span></div>
       <div class="when">${m.next ? `Next: ${esc(m.next.name)} at ${esc(m.next.hhmm)}` : ''}${m.ramadan && m.key === 'maghrib' ? ' · Allāhumma laka ṣumtu wa ʿalā rizqika afṭartu' : ''}</div>${MOSQUE}`;
     ft = `<span class="src">The Pomodoro can wait; the prayer cannot.</span><button class="btn" data-snooze>In 5 min</button><button class="btn pri" data-x>OK</button>`;
+  } else if (m.type === 'update') {
+    cls = 'update';
+    const ready = m.kind === 'ready';
+    hd = `<span class="ic">⬆</span><div><b>${ready ? 'Update ready to install' : 'A new version is available'}</b><small>You have version ${esc(m.current || '')}</small></div>`;
+    body = `<div class="holi"><h2>${esc(m.name)}</h2><p>${esc(m.notes || 'Bug fixes and new features.')}</p></div>`;
+    ft = ready ? `<span class="src">Or it installs when you close the app</span><button class="btn" data-x>Later</button><button class="btn pri" data-act="restart">Restart now</button>`
+      : `<button class="btn" data-act="notes">What’s new</button><span class="src"></span><button class="btn" data-x>Later</button><button class="btn pri" data-act="install">${m.canInstall ? 'Update now' : 'Download'}</button>`;
   } else if (m.type === 'holiday') {
     cls = m.kind === 'eid' ? 'eid' : m.kind === 'ramadan' ? 'ramadan' : '';
     hd = `<span class="ic">☪</span><div><b>${esc(m.title)}</b><small>${esc(m.hijri || '')}</small></div>`;
@@ -45,7 +52,7 @@ function render(m) {
   document.getElementById('root').innerHTML = `<div class="card ${cls}"><div class="hd">${hd}<button class="x" data-x>×</button></div><div class="body">${body}</div><div class="ft">${ft}</div><div class="timer"><i id="tb"></i></div></div>`;
   const send = () => ov.send('pop:size', Math.ceil(document.querySelector('.card').getBoundingClientRect().height + 20));
   send();
-  total = left = (m.type === 'prayer' ? 90 : m.type === 'holiday' ? 60 : 35) * 1000; clearInterval(timer);
+  total = left = (m.type === 'prayer' ? 90 : m.type === 'holiday' || m.type === 'update' ? 60 : 35) * 1000; clearInterval(timer);
   timer = setInterval(() => { if (paused) return; left -= 100; document.getElementById('tb').style.transform = `scaleX(${Math.max(0, left / total)})`; if (left <= 0) close(); }, 100);
   if (m.type === 'prayer' && m.sound) chime();
 }
@@ -54,6 +61,7 @@ document.addEventListener('mouseleave', () => paused = false);
 document.addEventListener('click', e => {
   const mt = e.target.closest('.meta'); if (mt) { mt.classList.toggle('full'); ov.send('pop:size', Math.ceil(document.querySelector('.card').getBoundingClientRect().height + 20)); }
   if (e.target.closest('[data-x]')) close();
+  const ac = e.target.closest('[data-act]'); if (ac) { ov.send('pop:act', ac.dataset.act); close(); }
   if (e.target.closest('[data-snooze]')) { ov.send('pop:snooze', cur); close(); }
 });
 document.addEventListener('toggle', () => ov.send('pop:size', Math.ceil(document.querySelector('.card').getBoundingClientRect().height + 20)), true);

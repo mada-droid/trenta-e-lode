@@ -76,6 +76,33 @@ function taskRow(t, { showDate = false } = {}) {
     </div>
   </div>`;
 }
+// Tick / untick a plan task, with a sound that grows as you get closer to a goal.
+function planToggle(k) {
+  const cur = S.plan[k]?.done, t = today();
+  const ph0 = PHASES.map(p => phaseProgress(p).pct), od0 = overdue().length;
+  S.plan[k] = { done: !cur, at: Date.now() }; save();
+  if (cur) { SFX.untick(); return render(); }
+  const tt = planTasks(t), inToday = tt.some(x => x.key === k);
+  const phaseDone = PHASES.find((p, i) => ph0[i] < 1 && phaseProgress(p).pct >= 1);
+  if (phaseDone) { SFX.milestone(); toast('Phase complete: ' + phaseDone.t + '! 🏆'); }
+  else if (inToday && tt.every(x => x.done) && GEN.allDone(t)) { SFX.dayDone(); toast('Today’s plan is complete! 🎉 Great work'); }
+  else if (od0 && !overdue().length) { SFX.goal(); toast('All caught up! ✓'); }
+  else {
+    const w = x => x.p || 1, tot = tt.reduce((a, x) => a + w(x), 0), dn = tt.filter(x => x.done).reduce((a, x) => a + w(x), 0);
+    SFX.tick(inToday && tot ? dn / tot : 0.3); toast('Done! ✓ You will find it in Completed');
+  }
+  render();
+}
+// A day crossed out with an X in the study plan (double right-click on the day).
+let crossFresh = null;
+function crossMark(d) {
+  return `<svg class="xmark ${d === crossFresh ? 'fresh' : ''}" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M14 14 L86 86"/><path pathLength="1" d="M86 14 L14 86"/></svg>`;
+}
+function toggleCross(d) {
+  if (S.crossed[d]) delete S.crossed[d]; else { S.crossed[d] = Date.now(); crossFresh = d; }
+  SFX.cross(!!S.crossed[d]); save();
+  const y = $('#view').scrollTop; render(); $('#view').scrollTop = y; crossFresh = null;
+}
 function findPlanTask(key, date) { return planTasks(date).find(t => t.key === key); }
 function nextExam() { return S.exams.find(e => e.date >= today() && S.outcome[e.id] !== 'skip') || S.exams[S.exams.length - 1]; }
 function donut(p, col, size = 66, label = null) {
@@ -158,6 +185,7 @@ V.today = () => {
     <div class="card today-tasks">
       <div class="row"><h2>Today’s plan</h2><span class="sp"></span><span class="pill">${dn}/${tot} 🍅</span><button class="btn sm ghost" data-go="plan">Calendar</button></div>
       ${tasks.length ? tasks.map(x => taskRow(x)).join('') : isEmptySubject() ? noData('No plan for this subject yet.') : '<div class="empty">Nothing planned for today. Use the time for flashcards or your Mistakes log.</div>'}
+      ${GEN.section(t)}
       ${od.length ? `<div style="margin-top:18px" class="row"><h3 style="color:var(--bad);margin:0">To catch up (${od.length})</h3><span class="sp"></span><button class="btn sm ghost" data-go="done">✓ Completed</button><button class="btn sm" data-a="resched-all">Reschedule all</button></div>
         ${od.slice(0, 6).map(x => taskRow(x, { showDate: true })).join('')}${od.length > 6 ? `<div class="muted small">…and ${od.length - 6} more</div>` : ''}` : ''}
     </div>
@@ -196,16 +224,17 @@ V.plan = () => {
     if ((dt.getDay() + 6) % 7 === 0) cells.push(`<div class="wk">${dt.toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })}</div>`);
     const tasks = planTasks(d), tot = tasks.reduce((a, x) => a + x.p, 0), dn = tasks.filter(x => x.done).reduce((a, x) => a + x.p, 0);
     const ph = phaseOf(d), h = hols[d];
-    cells.push(`<div class="day ${d === t ? 'today' : ''} ${d === sel ? 'sel' : ''} ${d < t ? 'past' : ''} ${ex[d] ? 'exam' : ''} ${h ? 'hol-' + h.kind : ''}" data-a="sel-day" data-d="${d}">
+    cells.push(`<div class="day ${d === t ? 'today' : ''} ${d === sel ? 'sel' : ''} ${d < t ? 'past' : ''} ${ex[d] ? 'exam' : ''} ${h ? 'hol-' + h.kind : ''} ${S.crossed[d] ? 'crossed' : ''}" data-a="sel-day" data-d="${d}">
       <div class="n">${dt.getDate()}${dt.getDate() === 1 ? ' ' + dt.toLocaleDateString(LOCALE, { month: 'short' }) : ''}${h ? ' <span class="hmark" title="' + esc(h.name) + '">☾</span>' : ''}</div>
       ${ph ? `<span class="ph" style="background:${ph.color}"></span>` : ''}
       <div class="note">${esc(ex[d] || PLAN[d]?.note || (tasks.length ? plural(tasks.length, 'task') : ''))}</div>
       ${tot ? `<div class="small faint">${tot} 🍅</div><div class="fill" style="width:${dn / tot * 100}%"></div>` : ''}
+      ${S.crossed[d] ? crossMark(d) : ''}
     </div>`);
   }
   const tasks = planTasks(sel), ne = nextExam();
   return `
-  <div class="row"><div><h1>Study plan</h1><p class="sub">${ne && ne.date >= t ? `From ${fmtDay(from, { day: 'numeric', month: 'long' })} to the exam on ${fmtDay(ne.date, { day: 'numeric', month: 'long' })}.` : esc(SUBJ.def.name) + '.'} Click a day for details.${SUBJ.auto ? ` Built from your files on ${fmtDay(SUBJ.auto.gen, { day: 'numeric', month: 'short' })}: press <b>Reload</b> in Materials after adding files.` : ''}</p></div>
+  <div class="row"><div><h1>Study plan</h1><p class="sub">${ne && ne.date >= t ? `From ${fmtDay(from, { day: 'numeric', month: 'long' })} to the exam on ${fmtDay(ne.date, { day: 'numeric', month: 'long' })}.` : esc(SUBJ.def.name) + '.'} Click a day for details; double right-click it to cross it out.${SUBJ.auto ? ` Built from your files on ${fmtDay(SUBJ.auto.gen, { day: 'numeric', month: 'short' })}: press <b>Reload</b> in Materials after adding files.` : ''}</p></div>
     <span class="sp"></span>${S.exams.some(e => e.date > t) ? '<button class="btn" data-a="recovery">Catch-up plan for the next exam…</button>' : ''}</div>
   ${PHASES.length ? `<div class="grid g3" style="margin-bottom:16px">${PHASES.map(p => { const q = phaseProgress(p); return `<div class="card tight phase" data-a="sel-day" data-d="${p.from}" style="--c:${p.color}">
     <div class="row">${donut(q.pct, p.color, 46)}<div style="min-width:0;flex:1"><b class="ell">${esc(p.t)}</b><div class="small muted">${fmtDay(p.from)} → ${fmtDay(p.to)} · ${q.tot} 🍅</div></div></div></div>`; }).join('')}</div>` : ''}
@@ -216,6 +245,7 @@ V.plan = () => {
       ${hols[sel] ? `<p class="small" style="color:var(--gold);margin-top:-6px">☾ ${esc(hols[sel].name)}</p>` : ''}
       ${PLAN[sel]?.note ? `<p class="muted" style="margin-top:-6px">${esc(PLAN[sel].note)}</p>` : ''}
       ${tasks.length ? tasks.map(x => taskRow(x)).join('') : '<div class="empty">No tasks.</div>'}
+      ${GEN.section(sel)}
       ${(() => { const ph = phaseOf(sel); return ph ? `<h3 style="margin-top:16px">Phase goals</h3><ul class="small" style="padding-left:18px;margin:0">${ph.goals.map(g => `<li>${esc(g)}</li>`).join('')}</ul>` : ''; })()}
     </div>
   </div>`;
@@ -278,8 +308,8 @@ V.todo = () => {
   <h1>To-do</h1><p class="sub">Your personal tasks for all subjects, with deadlines and priorities. Type naturally: <i>“redo exercise 7 tomorrow !! #limits 2🍅”</i></p>
   <div class="card" style="margin-bottom:16px">${todoForm()}</div>
   <div class="tabs">${[['open', 'Open'], ['today', 'Today & overdue'], ['week', 'Next 7 days'], ['done', 'Done'], ['all', 'All']].map(([k, l]) => `<button class="${f === k ? 'on' : ''}" data-a="todo-filter" data-f="${k}">${l}</button>`).join('')}
-    <span class="sp"></span>${[['all', 'All subjects', 'var(--faint)'], ...subjects().map(s => [s.id, short(s), s.color])].map(([k, l, c]) => `<button class="${sf === k ? 'on' : ''}" data-a="todo-sf" data-f="${k}"><span class="dot" style="background:${c}"></span> ${esc(l)}</button>`).join('')}</div>
-  <div class="card">${list.length ? list.map(x => {
+    <span class="sp"></span>${[['all', 'All subjects', 'var(--faint)'], ...subjects().map(s => [s.id, short(s), s.color]), [GEN.KEY, '✦ General', 'var(--accent)']].map(([k, l, c]) => `<button class="${sf === k ? 'on' : ''}" data-a="todo-sf" data-f="${k}"><span class="dot" style="background:${c}"></span> ${esc(l)}</button>`).join('')}</div>
+  <div class="card" ${sf === GEN.KEY ? 'hidden' : ''}>${list.length ? list.map(x => {
     const xs = subjDef(x.subj), top = x.subj === CUR ? topicById[x.topic] : null;
     const spent = S.sessions.filter(s => s.task === 'todo:' + x.id).length;
     return `<div class="task prio-${x.prio} ${x.done ? 'done' : ''}">
@@ -293,12 +323,13 @@ V.todo = () => {
       </div>
       <div class="acts">${!x.done ? `<button class="btn sm" data-a="focus-todo" data-id="${x.id}" title="Pomodoro">🍅</button>` : ''}<button class="btn sm ghost" data-a="todo-edit" data-id="${x.id}">✎</button><button class="btn sm ghost danger" data-a="todo-del" data-id="${x.id}">✕</button></div>
     </div>`;
-  }).join('') : '<div class="empty">Nothing here. Add a task above.</div>'}</div>`;
+  }).join('') : '<div class="empty">Nothing here. Add a task above.</div>'}</div>
+  ${sf === 'all' || sf === GEN.KEY ? GEN.todoCard() : ''}`;
 };
 function todoForm() {
   return `<form data-form="todo-add" class="grid todo-form">
       <label class="f">Task<input type="text" name="title" placeholder="What do you need to do?" required></label>
-      <label class="f">Subject<select name="subj"><option value="">—</option>${subjects().map(s => `<option value="${s.id}" ${s.id === CUR ? 'selected' : ''}>${esc(short(s))}</option>`).join('')}</select></label>
+      <label class="f">Subject<select name="subj"><option value="">—</option>${subjects().map(s => `<option value="${s.id}" ${s.id === CUR ? 'selected' : ''}>${esc(short(s))}</option>`).join('')}${GEN.opt()}</select></label>${GEN.repField()}
       <label class="f">Due<input type="date" name="due"></label>
       <label class="f">Priority<select name="prio"><option value="1">Normal</option><option value="2">High</option><option value="3">Urgent</option></select></label>
       <label class="f">Topic<select name="topic"><option value="">—</option>${TOPICS.map(x => `<option value="${x.id}">${esc(x.t)}</option>`).join('')}</select></label>
@@ -555,7 +586,12 @@ function locationCard(title = 'Your location') {
       <div class="row"><button class="btn pri" data-a="geo-save">Use ${esc(sub.geoPick.name)}</button><span class="small muted">The method is suggested for ${esc(sub.geoPick.region)}: check it matches your mosque’s timetable.</span></div>` : ''}
   </div>`;
 }
-let METHODS = {}, APPINFO = {};
+let METHODS = {}, APPINFO = {}, UPDST = null;
+function updLabel() {
+  const u = UPDST, v = 'Version ' + (APPINFO.version || '');
+  if (!u) return v;
+  return v + ' · ' + ({ checking: 'checking…', uptodate: 'up to date', available: `version ${u.latest} is available`, downloading: `downloading ${u.latest}… ${u.progress || 0}%`, ready: `${u.latest} ready: it installs when you close the app`, offline: 'no connection, will retry later', error: 'update failed: ' + (u.error || '') }[u.state] || '');
+}
 function contentCard() {
   const n = OFFL.adhkar.length, v = OFFL.verses.length;
   return `<div class="card grid"><h2 style="margin:0">Adhkar and Qur’an passages</h2>
@@ -684,6 +720,7 @@ V.settings = () => {
       <label class="row"><input type="checkbox" name="autoBreak" ${s.autoBreak ? 'checked' : ''}> Start breaks automatically</label>
       <label class="row"><input type="checkbox" name="autoFocus" ${s.autoFocus ? 'checked' : ''}> Start the next Pomodoro automatically</label>
       <label class="row"><input type="checkbox" name="sound" ${s.sound ? 'checked' : ''}> Sound at the end of a session</label>
+      <label class="row"><input type="checkbox" name="uiSound" ${s.uiSound !== false ? 'checked' : ''}> Interface sounds (hovering buttons, ticked tasks, goals)</label>
       <h2 style="margin:8px 0 0">Appearance and app</h2>
       <label class="f">Your name (for the greeting)<input type="text" name="name" value="${esc(s.name)}"></label>
       <label class="f">Theme<select name="theme"><option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>Dark</option><option value="light" ${s.theme === 'light' ? 'selected' : ''}>Light</option></select></label>
@@ -691,6 +728,10 @@ V.settings = () => {
       <label class="f">New flashcards per day<input type="number" name="newCardsPerDay" min="0" max="50" value="${s.newCardsPerDay}"></label>
       <label class="row"><input type="checkbox" name="notch" ${s.notch ? 'checked' : ''}> When minimised, show the dynamic “notch” at the top of the screen</label>
       ${APPINFO.canAutostart ? `<label class="row"><input type="checkbox" name="autostart" ${s.autostart ? 'checked' : ''}> Start Trenta e Lode when I sign in to the computer</label>` : ''}
+      <h2 style="margin:8px 0 0">Updates</h2>
+      <label class="row"><input type="checkbox" name="autoUpdate" ${s.autoUpdate !== false ? 'checked' : ''}> Install updates automatically <span class="small muted">— downloaded in the background, installed when you close the app</span></label>
+      <label class="row"><input type="checkbox" name="updateNotify" ${s.updateNotify !== false ? 'checked' : ''}> Tell me when a new version is available <span class="small muted">— a popup to update now or later</span></label>
+      <div class="row small"><span class="muted" id="upd-status">${updLabel()}</span><span class="sp"></span><button type="button" class="btn sm" data-a="update-check">Check now</button></div>
       <div class="row"><button class="btn pri">Save</button></div></form>
     <div class="card grid"><h2 style="margin:0">Islamic features</h2>
       <label class="row"><input type="checkbox" data-a="islamic" ${islamicOn() ? 'checked' : ''}> Prayer times, Hijri calendar, Ramaḍān and ʿĪd styling, adhkar and Qur’an reminders</label>

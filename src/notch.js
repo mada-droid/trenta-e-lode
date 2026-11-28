@@ -27,8 +27,9 @@ function render() {
 }
 ov.on('status', s => { S = s; render(); });
 ov.on('pulse', () => { pill.classList.remove('pulse'); void pill.offsetWidth; pill.classList.add('pulse'); });
-pill.addEventListener('mouseenter', () => { ov.send('notch:mouse', false); pill.classList.add('open'); });
-pill.addEventListener('mouseleave', () => { pill.classList.remove('open'); ov.send('notch:mouse', true); });
+// Open/close comes from the main process, which polls the cursor (works even when another app has focus).
+ov.on('notch:hover', over => pill.classList.toggle('open', !!over));
+pill.addEventListener('mouseenter', () => ov.send('notch:mouse', false));
 pill.addEventListener('click', e => { const b = e.target.closest('[data-c]'); if (b) ov.send('notch:cmd', b.dataset.c); else if (!pill.classList.contains('open')) ov.send('notch:cmd', 'open'); });
 pill.addEventListener('dblclick', e => { if (!e.target.closest('[data-c]')) ov.send('notch:cmd', 'open'); });
 pill.addEventListener('contextmenu', e => { e.preventDefault(); ov.send('notch:menu'); });

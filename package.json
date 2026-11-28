@@ -1,13 +1,16 @@
 {
   "name": "trenta-e-lode",
   "productName": "Trenta e Lode",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "A free study planner for university students: your own subjects, a study plan generated from your files, Pomodoro with a lofi focus mode, flashcards, prayer times for any city, adhkar and Qur'an reminders.",
   "main": "main.js",
   "license": "MIT",
   "author": "Trenta e Lode contributors",
   "homepage": "https://github.com/mada-droid/trenta-e-lode",
-  "repository": { "type": "git", "url": "https://github.com/mada-droid/trenta-e-lode.git" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mada-droid/trenta-e-lode.git"
+  },
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder --win nsis portable",
@@ -16,6 +19,7 @@
   },
   "dependencies": {
     "adhan": "^4.4.3",
+    "electron-updater": "^6.8.11",
     "katex": "^0.16.11"
   },
   "devDependencies": {
@@ -25,12 +29,52 @@
   "build": {
     "appId": "io.github.trentaelode",
     "productName": "Trenta e Lode",
-    "directories": { "output": "dist" },
-    "files": ["main.js", "preload.js", "preload-overlay.js", "src/**/*", "assets/**/*", "build/icon.png", "build/icon-48.png", "LICENSE", "package.json"],
-    "win": { "icon": "build/icon.ico", "target": ["nsis", "portable"] },
-    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "shortcutName": "Trenta e Lode", "artifactName": "Trenta-e-Lode-Setup-${version}.${ext}" },
-    "portable": { "artifactName": "Trenta-e-Lode-${version}-portable.exe" },
-    "mac": { "icon": "build/icon-1024.png", "category": "public.app-category.education" },
-    "linux": { "icon": "build/icon-1024.png", "category": "Education" }
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "preload-overlay.js",
+      "updater.js",
+      "src/**/*",
+      "assets/**/*",
+      "build/icon.png",
+      "build/icon-48.png",
+      "LICENSE",
+      "package.json"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Trenta e Lode",
+      "artifactName": "Trenta-e-Lode-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "Trenta-e-Lode-${version}-portable.exe"
+    },
+    "mac": {
+      "icon": "build/icon-1024.png",
+      "category": "public.app-category.education"
+    },
+    "linux": {
+      "icon": "build/icon-1024.png",
+      "category": "Education"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "mada-droid",
+        "repo": "trenta-e-lode"
+      }
+    ]
   }
 }
