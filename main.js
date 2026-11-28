@@ -31,6 +31,7 @@ let hub = null;
 let prefs = {
   theme: 'dark', notch: true, islamic: true, prayerPopups: true, prayers: { dhuhr: true, asr: true, maghrib: true, isha: true }, prayerSound: true,
   adhkar: true, adhkarEvery: 10, verses: true, dndSim: true, hijriOffset: 0, holidayPopups: true, location: null, autostart: false,
+  autoUpdate: true, updateNotify: true,
 };
 let status = {};
 const OV_PRELOAD = path.join(__dirname, 'preload-overlay.js');
@@ -124,6 +125,7 @@ app.whenReady().then(() => {
     cb({ requestHeaders: d.requestHeaders });
   });
   createWindow();
+  if (!process.env.TL_SHOT) UPD.start();
   screen.on('display-added', refit);
   screen.on('display-removed', refit);
   if (!process.env.TL_SHOT) { setInterval(schedTick, 15000); setTimeout(schedTick, 8000); }
@@ -523,12 +525,28 @@ function showNotch() {
     notch.setAlwaysOnTop(true, 'screen-saver');
     notch.setIgnoreMouseEvents(true, { forward: true });
     notch.loadFile(path.join(__dirname, 'src', 'notch.html'));
-    notch.webContents.once('did-finish-load', () => { notch.webContents.send('status', status); notch.showInactive(); });
-  } else { notch.webContents.send('status', status); notch.showInactive(); }
+    notch.webContents.once('did-finish-load', () => { notch.webContents.send('status', status); notch.showInactive(); notchTrack(); });
+  } else { notch.webContents.send('status', status); notch.showInactive(); notchTrack(); }
 }
-function hideNotch() { if (notch && !notch.isDestroyed()) notch.hide(); }
+function hideNotch() { if (notch && !notch.isDestroyed()) notch.hide(); notchHover(false); }
+// On Windows the forwarded mouse events of a click-through window stop arriving once another app has
+// focus, so the notch never "heard" the pointer. Poll the cursor instead and switch click-through on/off.
+let notchPoll = null, notchOver = false;
+function notchHover(over) {
+  if (over === notchOver) return; notchOver = over;
+  if (notch && !notch.isDestroyed()) { notch.setIgnoreMouseEvents(!over, { forward: true }); notch.webContents.send('notch:hover', over); }
+}
+function notchTrack() {
+  clearInterval(notchPoll);
+  notchPoll = setInterval(() => {
+    if (!notch || notch.isDestroyed() || !notch.isVisible()) { clearInterval(notchPoll); notchPoll = null; notchOver = false; return; }
+    const p = screen.getCursorScreenPoint(), b = notch.getBounds();
+    const w = notchOver ? 584 : 384, h = notchOver ? 172 : 46, x0 = b.x + (b.width - w) / 2; // pill size (+2 px margin) when open / closed
+    notchHover(p.x >= x0 && p.x <= x0 + w && p.y >= b.y - 2 && p.y <= b.y + h);
+  }, 50);
+}
 function restoreMain() { if (!win) return; win.show(); if (win.isMinimized()) win.restore(); win.focus(); hideNotch(); }
-ipcMain.on('notch:mouse', (_e, ignore) => { if (notch && !notch.isDestroyed()) notch.setIgnoreMouseEvents(!!ignore, { forward: true }); });
+ipcMain.on('notch:mouse', (_e, ignore) => notchHover(!ignore));
 ipcMain.on('notch:cmd', (_e, c) => { if (c === 'open') return restoreMain(); if (win) win.webContents.send('cmd', c); });
 ipcMain.on('notch:menu', () => {
   Menu.buildFromTemplate([{ label: 'Open Trenta e Lode', click: restoreMain }, { label: 'Focus mode (full screen)', click: () => { restoreMain(); win.webContents.send('cmd', 'zen'); } },
@@ -563,6 +581,13 @@ ipcMain.on('pop:size', (_e, h) => {
 });
 ipcMain.on('pop:close', () => { if (pop && !pop.isDestroyed()) pop.hide(); });
 ipcMain.on('pop:snooze', (_e, m) => setTimeout(() => showPopup(m), 5 * 60000));
+
+// ─── Updates (updater.js) ────────────────────────────────────────────────
+const UPD = require('./updater.js')({ getPrefs: () => prefs, showPopup: m => showPopup(m), send: (ch, d) => { if (win && !win.isDestroyed()) win.webContents.send(ch, d); }, repo: REPO });
+ipcMain.on('pop:act', (_e, a) => UPD.act(a));
+ipcMain.handle('update:check', () => UPD.check(true));
+ipcMain.handle('update:status', () => UPD.status());
+ipcMain.handle('update:act', (_e, a) => UPD.act(a));
 
 // Next item of a shuffled queue: nothing repeats until everything has been shown.
 function nextOf(kind, ids) {
@@ -630,6 +655,7 @@ function schedTick() {
   }
 }
 function testPopup(kind, now = new Date()) {
+  if (kind === 'keep') return; // self-test: capture the popup that is already showing
   const P = OFF.prayer;
   if (kind === 'prayer') {
     const n = (P && ISL.next(P, now)) || { k: 'asr', name: 'ʿAsr', ar: 'العصر', hhmm: '14:22' };

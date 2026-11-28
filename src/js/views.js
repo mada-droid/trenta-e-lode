@@ -308,8 +308,8 @@ V.todo = () => {
   <h1>To-do</h1><p class="sub">Your personal tasks for all subjects, with deadlines and priorities. Type naturally: <i>“redo exercise 7 tomorrow !! #limits 2🍅”</i></p>
   <div class="card" style="margin-bottom:16px">${todoForm()}</div>
   <div class="tabs">${[['open', 'Open'], ['today', 'Today & overdue'], ['week', 'Next 7 days'], ['done', 'Done'], ['all', 'All']].map(([k, l]) => `<button class="${f === k ? 'on' : ''}" data-a="todo-filter" data-f="${k}">${l}</button>`).join('')}
-    <span class="sp"></span>${[['all', 'All subjects', 'var(--faint)'], ...subjects().map(s => [s.id, short(s), s.color])].map(([k, l, c]) => `<button class="${sf === k ? 'on' : ''}" data-a="todo-sf" data-f="${k}"><span class="dot" style="background:${c}"></span> ${esc(l)}</button>`).join('')}</div>
-  <div class="card">${list.length ? list.map(x => {
+    <span class="sp"></span>${[['all', 'All subjects', 'var(--faint)'], ...subjects().map(s => [s.id, short(s), s.color]), [GEN.KEY, '✦ General', 'var(--accent)']].map(([k, l, c]) => `<button class="${sf === k ? 'on' : ''}" data-a="todo-sf" data-f="${k}"><span class="dot" style="background:${c}"></span> ${esc(l)}</button>`).join('')}</div>
+  <div class="card" ${sf === GEN.KEY ? 'hidden' : ''}>${list.length ? list.map(x => {
     const xs = subjDef(x.subj), top = x.subj === CUR ? topicById[x.topic] : null;
     const spent = S.sessions.filter(s => s.task === 'todo:' + x.id).length;
     return `<div class="task prio-${x.prio} ${x.done ? 'done' : ''}">
@@ -323,12 +323,13 @@ V.todo = () => {
       </div>
       <div class="acts">${!x.done ? `<button class="btn sm" data-a="focus-todo" data-id="${x.id}" title="Pomodoro">🍅</button>` : ''}<button class="btn sm ghost" data-a="todo-edit" data-id="${x.id}">✎</button><button class="btn sm ghost danger" data-a="todo-del" data-id="${x.id}">✕</button></div>
     </div>`;
-  }).join('') : '<div class="empty">Nothing here. Add a task above.</div>'}</div>`;
+  }).join('') : '<div class="empty">Nothing here. Add a task above.</div>'}</div>
+  ${sf === 'all' || sf === GEN.KEY ? GEN.todoCard() : ''}`;
 };
 function todoForm() {
   return `<form data-form="todo-add" class="grid todo-form">
       <label class="f">Task<input type="text" name="title" placeholder="What do you need to do?" required></label>
-      <label class="f">Subject<select name="subj"><option value="">—</option>${subjects().map(s => `<option value="${s.id}" ${s.id === CUR ? 'selected' : ''}>${esc(short(s))}</option>`).join('')}</select></label>
+      <label class="f">Subject<select name="subj"><option value="">—</option>${subjects().map(s => `<option value="${s.id}" ${s.id === CUR ? 'selected' : ''}>${esc(short(s))}</option>`).join('')}${GEN.opt()}</select></label>${GEN.repField()}
       <label class="f">Due<input type="date" name="due"></label>
       <label class="f">Priority<select name="prio"><option value="1">Normal</option><option value="2">High</option><option value="3">Urgent</option></select></label>
       <label class="f">Topic<select name="topic"><option value="">—</option>${TOPICS.map(x => `<option value="${x.id}">${esc(x.t)}</option>`).join('')}</select></label>
@@ -585,7 +586,12 @@ function locationCard(title = 'Your location') {
       <div class="row"><button class="btn pri" data-a="geo-save">Use ${esc(sub.geoPick.name)}</button><span class="small muted">The method is suggested for ${esc(sub.geoPick.region)}: check it matches your mosque’s timetable.</span></div>` : ''}
   </div>`;
 }
-let METHODS = {}, APPINFO = {};
+let METHODS = {}, APPINFO = {}, UPDST = null;
+function updLabel() {
+  const u = UPDST, v = 'Version ' + (APPINFO.version || '');
+  if (!u) return v;
+  return v + ' · ' + ({ checking: 'checking…', uptodate: 'up to date', available: `version ${u.latest} is available`, downloading: `downloading ${u.latest}… ${u.progress || 0}%`, ready: `${u.latest} ready: it installs when you close the app`, offline: 'no connection, will retry later', error: 'update failed: ' + (u.error || '') }[u.state] || '');
+}
 function contentCard() {
   const n = OFFL.adhkar.length, v = OFFL.verses.length;
   return `<div class="card grid"><h2 style="margin:0">Adhkar and Qur’an passages</h2>
@@ -722,6 +728,10 @@ V.settings = () => {
       <label class="f">New flashcards per day<input type="number" name="newCardsPerDay" min="0" max="50" value="${s.newCardsPerDay}"></label>
       <label class="row"><input type="checkbox" name="notch" ${s.notch ? 'checked' : ''}> When minimised, show the dynamic “notch” at the top of the screen</label>
       ${APPINFO.canAutostart ? `<label class="row"><input type="checkbox" name="autostart" ${s.autostart ? 'checked' : ''}> Start Trenta e Lode when I sign in to the computer</label>` : ''}
+      <h2 style="margin:8px 0 0">Updates</h2>
+      <label class="row"><input type="checkbox" name="autoUpdate" ${s.autoUpdate !== false ? 'checked' : ''}> Install updates automatically <span class="small muted">— downloaded in the background, installed when you close the app</span></label>
+      <label class="row"><input type="checkbox" name="updateNotify" ${s.updateNotify !== false ? 'checked' : ''}> Tell me when a new version is available <span class="small muted">— a popup to update now or later</span></label>
+      <div class="row small"><span class="muted" id="upd-status">${updLabel()}</span><span class="sp"></span><button type="button" class="btn sm" data-a="update-check">Check now</button></div>
       <div class="row"><button class="btn pri">Save</button></div></form>
     <div class="card grid"><h2 style="margin:0">Islamic features</h2>
       <label class="row"><input type="checkbox" data-a="islamic" ${islamicOn() ? 'checked' : ''}> Prayer times, Hijri calendar, Ramaḍān and ʿĪd styling, adhkar and Qur’an reminders</label>

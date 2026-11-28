@@ -63,5 +63,31 @@ const GEN = (() => {
     keepScroll(() => { list().push({ id: Math.random().toString(36).slice(2, 10), title, emoji: emoji(title), date: f.dataset.d, repeat: fd.get('rep') || '', done: {}, created: Date.now() }); save(); toast(L.added); });
     setTimeout(() => { const i = document.querySelector(`.gen-add[data-d="${f.dataset.d}"] input`); if (i) i.focus(); }, 30);
   });
-  return { section, on, allDone, occurs };
+  // ─── From "New task" / To-do: "General" as a choice in the Subject menu ───
+  const GKEY = '__gen';
+  const opt = () => `<option value="${GKEY}">✦ ${L.head} (${L.hint})</option>`;
+  const repField = () => `<label class="f gen-only" style="display:none">${IT ? 'Ripeti' : 'Repeat'}<select name="rep">${Object.entries(L.rep).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></label>`;
+  function add({ title, date, repeat = '' }) {
+    list().push({ id: Math.random().toString(36).slice(2, 10), title, emoji: emoji(title), date: date || today(), repeat, done: {}, created: Date.now() });
+    save(); toast(L.added);
+  }
+  // To-do tab: every General task, upcoming first; ticks apply to the task's day (today for repeating ones).
+  function todoCard() {
+    const t = today(), gs = list().slice().sort((a, b) => (!!a.repeat - !!b.repeat) || a.date.localeCompare(b.date));
+    const when = g => g.repeat ? `↻ ${L.rep[g.repeat]}` : g.date === t ? (IT ? 'oggi' : 'today') : fmtDay(g.date);
+    return `<div class="card gen-card" style="margin-top:16px"><div class="row gen-head"><h2 style="margin:0">✦ ${L.head}</h2><span class="faint small">· ${L.hint}</span></div>
+      ${gs.length ? gs.map(g => { const d = g.repeat ? t : g.date, show = !g.repeat || occurs(g, t), dn = isDone(g, d); return `<div class="task gen-task ${dn ? 'done' : ''}">
+        ${show ? `<button class="chk" data-a="gen-toggle" data-id="${g.id}" data-d="${d}"></button>` : '<span class="chk" style="visibility:hidden"></span>'}
+        <div class="body"><div class="ttl">${g.emoji ? g.emoji + ' ' : ''}${esc2(g.title)}</div><div class="meta"><span class="pill ${!g.repeat && g.date < t && !dn ? 'warn' : ''}">${when(g)}</span></div></div>
+        <div class="acts"><button class="btn sm ghost danger" data-a="gen-del" data-id="${g.id}" title="${g.repeat ? L.delAll : L.del}">✕</button></div></div>`; }).join('')
+        : `<div class="empty">${L.none}</div>`}</div>`;
+  }
+  // Show "Repeat" only when General is picked in a task form.
+  document.addEventListener('change', e => {
+    const s = e.target; if (s.name !== 'subj' || !s.closest('form')) return;
+    const f = s.closest('form'), g = s.value === GKEY;
+    f.querySelectorAll('.gen-only').forEach(x => { x.style.display = g ? '' : 'none'; });
+    f.querySelectorAll('[name=topic],[name=est],[name=prio]').forEach(x => { const l = x.closest('label'); if (l) l.style.display = g ? 'none' : ''; });
+  });
+  return { section, on, allDone, occurs, add, opt, repField, todoCard, KEY: GKEY };
 })();

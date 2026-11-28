@@ -251,6 +251,7 @@ document.addEventListener('click', async e => {
       toast('Data folder: ' + h.hub + ' (files in the old folder were not moved)'); if (!$('#onb').classList.contains('hidden')) onbRender(); else render(); break;
     }
     case 'tour': closeModal(); tourStart(); break;
+    case 'update-check': { const el2 = $('#upd-status'); if (el2) el2.textContent = 'Checking…'; UPDST = await window.api.updateCheck(); const t2 = $('#upd-status'); if (t2) t2.textContent = updLabel(); if (UPDST.state === 'uptodate') toast('You have the latest version'); break; }
     case 'tour-next': TI++; tourShow(); break;
     case 'tour-prev': TI = Math.max(0, TI - 1); tourShow(); break;
     case 'tour-end': tourEnd(); break;
@@ -279,6 +280,7 @@ document.addEventListener('submit', async e => {
   e.preventDefault();
   const f = e.target, fd = Object.fromEntries(new FormData(f)), kind = f.dataset.form;
   if (kind === 'quick-todo') { if (!fd.q.trim()) return; const p = parseQuick(fd.q); S.todos.push({ id: uid(), created: Date.now(), done: false, subj: CUR, ...p }); save(); toast('Added to your To-do'); render(); }
+  if (kind === 'todo-add' && fd.subj === GEN.KEY) { const p = parseQuick(fd.title); GEN.add({ title: p.title, date: fd.due || p.due || today(), repeat: fd.rep || '' }); closeModal(); render(); return; }
   if (kind === 'todo-add') {
     const p = parseQuick(fd.title);
     S.todos.push({ id: uid(), created: Date.now(), done: false, subj: fd.subj || CUR, title: p.title, due: fd.due || p.due, prio: Math.max(+fd.prio, p.prio), topic: fd.topic || p.topic, est: +fd.est || p.est });
@@ -321,7 +323,7 @@ document.addEventListener('submit', async e => {
   if (kind === 'settings') {
     const s = S.settings;
     for (const k of ['focus', 'short', 'long', 'longEvery', 'dailyGoal', 'newCardsPerDay']) s[k] = +fd[k];
-    for (const k of ['autoBreak', 'autoFocus', 'sound', 'uiSound', 'notch', 'autostart']) s[k] = !!fd[k];
+    for (const k of ['autoBreak', 'autoFocus', 'sound', 'uiSound', 'notch', 'autostart', 'autoUpdate', 'updateNotify']) s[k] = !!fd[k];
     s.name = (fd.name || '').trim(); s.videoLang = (fd.videoLang || 'English').trim() || 'English';
     s.theme = fd.theme; document.body.classList.toggle('light', s.theme === 'light');
     if (!P.running) P.left = modeLen(P.mode);
@@ -385,6 +387,7 @@ document.addEventListener('contextmenu', e => {
 });
 document.addEventListener('dblclick', e => { if (document.body.classList.contains('frameless') && e.target.closest('#top') && !e.target.closest('button, input, select, .search, .seg, .drop')) window.api.win('max'); });
 window.api.on('win:state', s => { document.body.classList.toggle('frameless', !!s.frameless); document.body.classList.toggle('maxed', !!s.max); });
+window.api.on('update:status', u => { UPDST = u; const el = $('#upd-status'); if (el) el.textContent = updLabel(); });
 window.api.on('popup:history', h => { S.popHist = h; S.unseen = (S.unseen || 0) + 1; topbar(); if (view === 'prayers') render(); });
 window.api.on('content:progress', p => { const t = `${p.step}: ${p.i} / ${p.n}`; ONB.dl = t; const el = $('#dl-prog'); if (el) el.textContent = t; });
 

@@ -102,7 +102,7 @@ const DEFAULT = () => ({
   v: 1, created: today(), onboarded: false, toured: false,
   subjects: [],
   settings: {
-    name: '', focus: 25, short: 5, long: 15, longEvery: 4, dailyGoal: 8, autoBreak: true, autoFocus: false, sound: true, uiSound: true, theme: 'dark', newCardsPerDay: 12,
+    name: '', focus: 25, short: 5, long: 15, longEvery: 4, dailyGoal: 8, autoBreak: true, autoFocus: false, sound: true, uiSound: true, autoUpdate: true, updateNotify: true, theme: 'dark', newCardsPerDay: 12,
     subject: '', notch: true, hub: '', videoLang: 'English', lofi: { src: 'gen', vol: 0.6, auto: true }, zenBg: 'collina',
     islamic: true, location: null, prayerPopups: true, prayers: { dhuhr: true, asr: true, maghrib: true, isha: true }, prayerSound: true,
     adhkar: true, adhkarEvery: 10, verses: true, dndSim: true, hijriOffset: 0, holidayPopups: true, autostart: false,
@@ -118,7 +118,8 @@ function save() {
 function sendPrefs() {
   const s = S.settings;
   window.api.prefs({ theme: s.theme, notch: s.notch, hub: OFFL.hub, islamic: s.islamic, location: s.location, prayerPopups: s.prayerPopups, prayers: s.prayers, prayerSound: s.prayerSound,
-    adhkar: s.adhkar, adhkarEvery: s.adhkarEvery, verses: s.verses, dndSim: s.dndSim, hijriOffset: s.hijriOffset, holidayPopups: s.holidayPopups, autostart: !!s.autostart });
+    adhkar: s.adhkar, adhkarEvery: s.adhkarEvery, verses: s.verses, dndSim: s.dndSim, hijriOffset: s.hijriOffset, holidayPopups: s.holidayPopups, autostart: !!s.autostart,
+    autoUpdate: s.autoUpdate !== false, updateNotify: s.updateNotify !== false });
 }
 const islamicOn = () => S.settings.islamic !== false;
 
