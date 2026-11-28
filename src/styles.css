@@ -482,3 +482,22 @@ code { font-family: ui-monospace, Consolas, monospace; font-size: 12px; backgrou
 .day .xmark.fresh path + path { animation-delay: .16s; }
 @keyframes xdraw { to { stroke-dashoffset: 0; } }
 .day.crossed > :not(.xmark) { opacity: .55; }
+
+/* General tasks (any subject) */
+.gen-sec { margin-top: 16px; padding-top: 10px; border-top: 1px dashed var(--line, rgba(127,127,127,.25)); }
+.gen-head { gap: 6px; align-items: baseline; } .gen-head h3 { margin: 0 0 4px; }
+.gen-task .ttl { font-weight: 600; }
+.gen-add { margin-top: 8px; gap: 6px; } .gen-add select { width: auto; }
+/* Study method (Video tab) */
+.sk-tabs { margin-left: 14px; }
+.sk-q { padding: 12px 0; border-top: 1px solid var(--line, rgba(127,127,127,.15)); }
+.sk-opts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.sk-opts .chip { text-align: left; }
+.sk-area { border-left: 3px solid var(--c); padding: 6px 0 6px 12px; margin: 12px 0; }
+.sk-bar { width: 90px; height: 6px; border-radius: 4px; background: var(--panel3); overflow: hidden; } .sk-bar i { display: block; height: 100%; background: var(--c); }
+.sk-vid { padding: 6px 4px; }
+.sk-en { font-weight: 700; color: var(--accent); }
+.sk-why { margin-top: 14px; padding: 10px 12px; border-radius: 12px; background: var(--panel2); border-left: 3px solid var(--c); display: grid; gap: 4px; }
+.sk-why .lbl { font-weight: 700; color: var(--c); }
+.sk-more summary { cursor: pointer; color: var(--muted); margin-top: 6px; }
+.sk-claude ol { margin: 0; padding-left: 20px; display: grid; gap: 8px; }

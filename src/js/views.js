@@ -85,7 +85,7 @@ function planToggle(k) {
   const tt = planTasks(t), inToday = tt.some(x => x.key === k);
   const phaseDone = PHASES.find((p, i) => ph0[i] < 1 && phaseProgress(p).pct >= 1);
   if (phaseDone) { SFX.milestone(); toast('Phase complete: ' + phaseDone.t + '! 🏆'); }
-  else if (inToday && tt.every(x => x.done)) { SFX.dayDone(); toast('Today’s plan is complete! 🎉 Great work'); }
+  else if (inToday && tt.every(x => x.done) && GEN.allDone(t)) { SFX.dayDone(); toast('Today’s plan is complete! 🎉 Great work'); }
   else if (od0 && !overdue().length) { SFX.goal(); toast('All caught up! ✓'); }
   else {
     const w = x => x.p || 1, tot = tt.reduce((a, x) => a + w(x), 0), dn = tt.filter(x => x.done).reduce((a, x) => a + w(x), 0);
@@ -185,6 +185,7 @@ V.today = () => {
     <div class="card today-tasks">
       <div class="row"><h2>Today’s plan</h2><span class="sp"></span><span class="pill">${dn}/${tot} 🍅</span><button class="btn sm ghost" data-go="plan">Calendar</button></div>
       ${tasks.length ? tasks.map(x => taskRow(x)).join('') : isEmptySubject() ? noData('No plan for this subject yet.') : '<div class="empty">Nothing planned for today. Use the time for flashcards or your Mistakes log.</div>'}
+      ${GEN.section(t)}
       ${od.length ? `<div style="margin-top:18px" class="row"><h3 style="color:var(--bad);margin:0">To catch up (${od.length})</h3><span class="sp"></span><button class="btn sm ghost" data-go="done">✓ Completed</button><button class="btn sm" data-a="resched-all">Reschedule all</button></div>
         ${od.slice(0, 6).map(x => taskRow(x, { showDate: true })).join('')}${od.length > 6 ? `<div class="muted small">…and ${od.length - 6} more</div>` : ''}` : ''}
     </div>
@@ -244,6 +245,7 @@ V.plan = () => {
       ${hols[sel] ? `<p class="small" style="color:var(--gold);margin-top:-6px">☾ ${esc(hols[sel].name)}</p>` : ''}
       ${PLAN[sel]?.note ? `<p class="muted" style="margin-top:-6px">${esc(PLAN[sel].note)}</p>` : ''}
       ${tasks.length ? tasks.map(x => taskRow(x)).join('') : '<div class="empty">No tasks.</div>'}
+      ${GEN.section(sel)}
       ${(() => { const ph = phaseOf(sel); return ph ? `<h3 style="margin-top:16px">Phase goals</h3><ul class="small" style="padding-left:18px;margin:0">${ph.goals.map(g => `<li>${esc(g)}</li>`).join('')}</ul>` : ''; })()}
     </div>
   </div>`;
