@@ -76,6 +76,33 @@ function taskRow(t, { showDate = false } = {}) {
     </div>
   </div>`;
 }
+// Tick / untick a plan task, with a sound that grows as you get closer to a goal.
+function planToggle(k) {
+  const cur = S.plan[k]?.done, t = today();
+  const ph0 = PHASES.map(p => phaseProgress(p).pct), od0 = overdue().length;
+  S.plan[k] = { done: !cur, at: Date.now() }; save();
+  if (cur) { SFX.untick(); return render(); }
+  const tt = planTasks(t), inToday = tt.some(x => x.key === k);
+  const phaseDone = PHASES.find((p, i) => ph0[i] < 1 && phaseProgress(p).pct >= 1);
+  if (phaseDone) { SFX.milestone(); toast('Phase complete: ' + phaseDone.t + '! 🏆'); }
+  else if (inToday && tt.every(x => x.done)) { SFX.dayDone(); toast('Today’s plan is complete! 🎉 Great work'); }
+  else if (od0 && !overdue().length) { SFX.goal(); toast('All caught up! ✓'); }
+  else {
+    const w = x => x.p || 1, tot = tt.reduce((a, x) => a + w(x), 0), dn = tt.filter(x => x.done).reduce((a, x) => a + w(x), 0);
+    SFX.tick(inToday && tot ? dn / tot : 0.3); toast('Done! ✓ You will find it in Completed');
+  }
+  render();
+}
+// A day crossed out with an X in the study plan (double right-click on the day).
+let crossFresh = null;
+function crossMark(d) {
+  return `<svg class="xmark ${d === crossFresh ? 'fresh' : ''}" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M14 14 L86 86"/><path pathLength="1" d="M86 14 L14 86"/></svg>`;
+}
+function toggleCross(d) {
+  if (S.crossed[d]) delete S.crossed[d]; else { S.crossed[d] = Date.now(); crossFresh = d; }
+  SFX.cross(!!S.crossed[d]); save();
+  const y = $('#view').scrollTop; render(); $('#view').scrollTop = y; crossFresh = null;
+}
 function findPlanTask(key, date) { return planTasks(date).find(t => t.key === key); }
 function nextExam() { return S.exams.find(e => e.date >= today() && S.outcome[e.id] !== 'skip') || S.exams[S.exams.length - 1]; }
 function donut(p, col, size = 66, label = null) {
@@ -196,16 +223,17 @@ V.plan = () => {
     if ((dt.getDay() + 6) % 7 === 0) cells.push(`<div class="wk">${dt.toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })}</div>`);
     const tasks = planTasks(d), tot = tasks.reduce((a, x) => a + x.p, 0), dn = tasks.filter(x => x.done).reduce((a, x) => a + x.p, 0);
     const ph = phaseOf(d), h = hols[d];
-    cells.push(`<div class="day ${d === t ? 'today' : ''} ${d === sel ? 'sel' : ''} ${d < t ? 'past' : ''} ${ex[d] ? 'exam' : ''} ${h ? 'hol-' + h.kind : ''}" data-a="sel-day" data-d="${d}">
+    cells.push(`<div class="day ${d === t ? 'today' : ''} ${d === sel ? 'sel' : ''} ${d < t ? 'past' : ''} ${ex[d] ? 'exam' : ''} ${h ? 'hol-' + h.kind : ''} ${S.crossed[d] ? 'crossed' : ''}" data-a="sel-day" data-d="${d}">
       <div class="n">${dt.getDate()}${dt.getDate() === 1 ? ' ' + dt.toLocaleDateString(LOCALE, { month: 'short' }) : ''}${h ? ' <span class="hmark" title="' + esc(h.name) + '">☾</span>' : ''}</div>
       ${ph ? `<span class="ph" style="background:${ph.color}"></span>` : ''}
       <div class="note">${esc(ex[d] || PLAN[d]?.note || (tasks.length ? plural(tasks.length, 'task') : ''))}</div>
       ${tot ? `<div class="small faint">${tot} 🍅</div><div class="fill" style="width:${dn / tot * 100}%"></div>` : ''}
+      ${S.crossed[d] ? crossMark(d) : ''}
     </div>`);
   }
   const tasks = planTasks(sel), ne = nextExam();
   return `
-  <div class="row"><div><h1>Study plan</h1><p class="sub">${ne && ne.date >= t ? `From ${fmtDay(from, { day: 'numeric', month: 'long' })} to the exam on ${fmtDay(ne.date, { day: 'numeric', month: 'long' })}.` : esc(SUBJ.def.name) + '.'} Click a day for details.${SUBJ.auto ? ` Built from your files on ${fmtDay(SUBJ.auto.gen, { day: 'numeric', month: 'short' })}: press <b>Reload</b> in Materials after adding files.` : ''}</p></div>
+  <div class="row"><div><h1>Study plan</h1><p class="sub">${ne && ne.date >= t ? `From ${fmtDay(from, { day: 'numeric', month: 'long' })} to the exam on ${fmtDay(ne.date, { day: 'numeric', month: 'long' })}.` : esc(SUBJ.def.name) + '.'} Click a day for details; double right-click it to cross it out.${SUBJ.auto ? ` Built from your files on ${fmtDay(SUBJ.auto.gen, { day: 'numeric', month: 'short' })}: press <b>Reload</b> in Materials after adding files.` : ''}</p></div>
     <span class="sp"></span>${S.exams.some(e => e.date > t) ? '<button class="btn" data-a="recovery">Catch-up plan for the next exam…</button>' : ''}</div>
   ${PHASES.length ? `<div class="grid g3" style="margin-bottom:16px">${PHASES.map(p => { const q = phaseProgress(p); return `<div class="card tight phase" data-a="sel-day" data-d="${p.from}" style="--c:${p.color}">
     <div class="row">${donut(q.pct, p.color, 46)}<div style="min-width:0;flex:1"><b class="ell">${esc(p.t)}</b><div class="small muted">${fmtDay(p.from)} → ${fmtDay(p.to)} · ${q.tot} 🍅</div></div></div></div>`; }).join('')}</div>` : ''}
@@ -684,6 +712,7 @@ V.settings = () => {
       <label class="row"><input type="checkbox" name="autoBreak" ${s.autoBreak ? 'checked' : ''}> Start breaks automatically</label>
       <label class="row"><input type="checkbox" name="autoFocus" ${s.autoFocus ? 'checked' : ''}> Start the next Pomodoro automatically</label>
       <label class="row"><input type="checkbox" name="sound" ${s.sound ? 'checked' : ''}> Sound at the end of a session</label>
+      <label class="row"><input type="checkbox" name="uiSound" ${s.uiSound !== false ? 'checked' : ''}> Interface sounds (hovering buttons, ticked tasks, goals)</label>
       <h2 style="margin:8px 0 0">Appearance and app</h2>
       <label class="f">Your name (for the greeting)<input type="text" name="name" value="${esc(s.name)}"></label>
       <label class="f">Theme<select name="theme"><option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>Dark</option><option value="light" ${s.theme === 'light' ? 'selected' : ''}>Light</option></select></label>

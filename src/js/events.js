@@ -130,7 +130,7 @@ document.addEventListener('click', async e => {
   const a = el.dataset.a, d = el.dataset;
   if (a && a.startsWith('onb-')) return onbAction(a, d, el);
   switch (a) {
-    case 'plan-toggle': { const cur = S.plan[d.k]?.done; S.plan[d.k] = { done: !cur, at: Date.now() }; save(); if (!cur) toast('Done! ✓ You will find it in Completed'); render(); break; }
+    case 'plan-toggle': planToggle(d.k); break;
     case 'plan-move': { const to = reschedule(d.k); toast('Moved to ' + fmtDay(to)); render(); break; }
     case 'resched-all': { const od = overdue(); od.forEach(t => reschedule(t.key)); toast(`${plural(od.length, 'task')} rescheduled over the next days`); render(); break; }
     case 'focus-task': { const t = findPlanTask(d.k, d.date); P.task = { ...t, subj: CUR }; if (P.mode !== 'focus') pSet('focus'); pStart(); go('pomodoro'); break; }
@@ -141,7 +141,7 @@ document.addEventListener('click', async e => {
     case 'todo-filter': sub.f = d.f; render(); break;
     case 'todo-sf': sub.sf = d.f; render(); break;
     case 'done-filter': sub[d.k] = d.v; render(); break;
-    case 'todo-toggle': { const x = S.todos.find(y => y.id === d.id); x.done = !x.done; x.doneAt = x.done ? Date.now() : null; save(); render(); break; }
+    case 'todo-toggle': { const x = S.todos.find(y => y.id === d.id); x.done = !x.done; x.doneAt = x.done ? Date.now() : null; x.done ? SFX.tick(0.5) : SFX.untick(); save(); render(); break; }
     case 'todo-del': S.todos = S.todos.filter(y => y.id !== d.id); save(); render(); break;
     case 'sub-toggle': { const x = S.todos.find(y => y.id === d.id); x.subs[+d.i].done = el.checked; save(); break; }
     case 'todo-edit': {
@@ -321,7 +321,7 @@ document.addEventListener('submit', async e => {
   if (kind === 'settings') {
     const s = S.settings;
     for (const k of ['focus', 'short', 'long', 'longEvery', 'dailyGoal', 'newCardsPerDay']) s[k] = +fd[k];
-    for (const k of ['autoBreak', 'autoFocus', 'sound', 'notch', 'autostart']) s[k] = !!fd[k];
+    for (const k of ['autoBreak', 'autoFocus', 'sound', 'uiSound', 'notch', 'autostart']) s[k] = !!fd[k];
     s.name = (fd.name || '').trim(); s.videoLang = (fd.videoLang || 'English').trim() || 'English';
     s.theme = fd.theme; document.body.classList.toggle('light', s.theme === 'light');
     if (!P.running) P.left = modeLen(P.mode);
@@ -376,6 +376,13 @@ window.api.on('cmd', c => {
 });
 // Frameless window (Windows): our own buttons, drag by the top bar, double-click to maximise.
 document.addEventListener('click', e => { const b = e.target.closest('[data-w]'); if (b) window.api.win(b.dataset.w); });
+let rClick = { d: null, t: 0 };
+document.addEventListener('contextmenu', e => {
+  const c = e.target.closest('.day[data-d]'); if (!c) return;
+  e.preventDefault();
+  const d = c.dataset.d, now = Date.now();
+  if (rClick.d === d && now - rClick.t < 500) { rClick = { d: null, t: 0 }; toggleCross(d); } else rClick = { d, t: now };
+});
 document.addEventListener('dblclick', e => { if (document.body.classList.contains('frameless') && e.target.closest('#top') && !e.target.closest('button, input, select, .search, .seg, .drop')) window.api.win('max'); });
 window.api.on('win:state', s => { document.body.classList.toggle('frameless', !!s.frameless); document.body.classList.toggle('maxed', !!s.max); });
 window.api.on('popup:history', h => { S.popHist = h; S.unseen = (S.unseen || 0) + 1; topbar(); if (view === 'prayers') render(); });
